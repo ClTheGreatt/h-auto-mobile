@@ -1,0 +1,18 @@
+diff --git a/node_modules/metro-config/src/loadConfig.js b/node_modules/metro-config/src/loadConfig.js
+index 7ac9d88..0a3449e 100644
+--- a/node_modules/metro-config/src/loadConfig.js
++++ b/node_modules/metro-config/src/loadConfig.js
+@@ -288,8 +288,11 @@ async function loadConfigFile(absolutePath) {
+           : configModule);
+       }
+     } catch (e) {
+-      try {
+-        const configModule = await import(absolutePath);
++try {
++        const importPath = process.platform === 'win32' && path.isAbsolute(absolutePath)
++          ? require('url').pathToFileURL(absolutePath).href
++          : absolutePath;
++        const configModule = await import(importPath);
+         config = await configModule.default;
+       } catch (error) {
+         let prefix = `Error loading Metro config at: ${absolutePath}\n`;

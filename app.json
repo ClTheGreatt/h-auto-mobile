@@ -13,13 +13,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#16a34a",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.hauto.mobile"
     },
     "web": {
       "output": "static",
@@ -38,11 +39,43 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "H-Auto uses the camera to take photos for your plot observations."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "H-Auto needs access to your photos so you can attach images to observations.",
+          "cameraPermission": "H-Auto uses the camera to take photos for your plot observations."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "H-Auto tags your plot observations with your current location."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "H-Auto uses Face ID to quickly and securely unlock the app."
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "970d4bf1-5467-4b8e-b80d-d7bd6adadad7"
+      }
     }
   }
 }
