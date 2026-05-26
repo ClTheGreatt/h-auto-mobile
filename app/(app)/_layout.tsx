@@ -1,8 +1,23 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { colors } from "../../constants/colors";
+import { addNotificationTapListener, registerPushToken } from "../../lib/push";
 
 export default function AppLayout() {
+  const router = useRouter();
+
+  // Magrehistro ng push token pagpasok sa authenticated area (no-op sa Expo Go).
+  useEffect(() => {
+    registerPushToken();
+  }, []);
+
+  // Pindot notification → punta sa Alerts tab (no-op sa Expo Go).
+  useEffect(() => {
+    const remove = addNotificationTapListener(() => router.push("/alerts"));
+    return remove;
+  }, [router]);
+
   return (
     <Tabs
       screenOptions={{

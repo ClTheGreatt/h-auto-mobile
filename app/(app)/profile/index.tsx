@@ -27,6 +27,7 @@ import {
 } from "../../../lib/biometric";
 import { useStats } from "../../../lib/hooks/use-stats";
 import { useUploadAvatar } from "../../../lib/hooks/use-upload-avatar";
+import { unregisterPushToken } from "../../../lib/push";
 import type { User } from "../../../types";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -150,6 +151,7 @@ export default function Profile() {
         text: "Log out",
         style: "destructive",
         onPress: async () => {
+          await unregisterPushToken(); // burahin ang push token bago i-clear ang auth
           await logout();
           queryClient.clear();
           router.replace("/(auth)/login");
