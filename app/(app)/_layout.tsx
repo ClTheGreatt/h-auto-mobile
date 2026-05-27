@@ -2,11 +2,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs, useRouter } from "expo-router";
 import { useEffect } from "react";
 import { colors } from "../../constants/colors";
+import { useOpenAlertsCount } from "../../lib/hooks/use-alerts";
 import { addNotificationTapListener, registerPushToken } from "../../lib/push";
 
 export default function AppLayout() {
   const router = useRouter();
-
+  const openAlerts = useOpenAlertsCount();
   // Magrehistro ng push token pagpasok sa authenticated area (no-op sa Expo Go).
   useEffect(() => {
     registerPushToken();
@@ -59,6 +60,7 @@ export default function AppLayout() {
         name="alerts"
         options={{
           title: "Alerts",
+          tabBarBadge: openAlerts > 0 ? openAlerts : undefined,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="notifications-outline" size={size} color={color} />
           ),
