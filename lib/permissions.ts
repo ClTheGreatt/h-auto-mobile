@@ -12,3 +12,17 @@ export function canManage(
     return false; // only super admin manages admins
   return true;
 }
+
+// Sino ang pwedeng mag-delete ng growth log entry? Mirrors web's
+// deleteGrowthLog check: author or admin/super_admin — Faculty is not
+// bypassed and can only delete their own logs.
+export function canDeleteLog(
+  log: { user: { id: string } },
+  currentUser: User | null,
+): boolean {
+  if (!currentUser) return false;
+  const isAuthor = log.user.id === currentUser.id;
+  const isAdmin =
+    currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN";
+  return isAuthor || isAdmin;
+}

@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   Modal,
@@ -13,7 +14,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../../../constants/colors";
+import { getUser } from "../../../../lib/auth";
+import { useDeleteObservation } from "../../../../lib/hooks/use-delete-observation";
 import { usePlot } from "../../../../lib/hooks/use-plot";
+import { canDeleteLog } from "../../../../lib/permissions";
+import type { User } from "../../../../types";
 
 const STATUS_COLORS: Record<
   string,
@@ -64,6 +69,12 @@ export default function PlotDetail() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [observationsY, setObservationsY] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const deleteObservation = useDeleteObservation();
+
+  useEffect(() => {
+    getUser().then(setCurrentUser);
+  }, []);
 
   useEffect(() => {
     if (scrollTo === "observations" && observationsY != null && scrollRef.current) {
@@ -107,6 +118,28 @@ export default function PlotDetail() {
 
   const plot = data.plot;
   const statusStyle = STATUS_COLORS[plot.status] ?? STATUS_COLORS.PREPARING;
+
+  function handleDeleteObservation(logId: string) {
+    Alert.alert(
+      "Delete observation?",
+      "This will permanently delete the log entry and all its photos. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () =>
+            deleteObservation.mutate(
+              { plotId: plot.id, logId },
+              {
+                onError: (err: any) =>
+                  Alert.alert("Could not delete", err?.message ?? "Try again"),
+              },
+            ),
+        },
+      ],
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
@@ -297,10 +330,25 @@ export default function PlotDetail() {
                   key={o.id}
                   className="border-l-2 border-brand-400 pl-3 py-1"
                 >
-                  <Text className="text-xs text-slate-500">
-                    {o.user.firstName} {o.user.lastName} •{" "}
-                    {formatRelativeTime(o.createdAt)}
-                  </Text>
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-xs text-slate-500 flex-1">
+                      {o.user.firstName} {o.user.lastName} •{" "}
+                      {formatRelativeTime(o.createdAt)}
+                    </Text>
+                    {canDeleteLog(o, currentUser) && (
+                      <Pressable
+                        onPress={() => handleDeleteObservation(o.id)}
+                        hitSlop={8}
+                        className="ml-2 active:opacity-60"
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color="#ef4444"
+                        />
+                      </Pressable>
+                    )}
+                  </View>
                   {o.observations && (
                     <Text className="text-sm text-slate-700 mt-1">
                       {o.observations}

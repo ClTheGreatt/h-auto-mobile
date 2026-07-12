@@ -82,6 +82,7 @@ export type Observation = {
   notes: string | null;
   createdAt: string;
   user: {
+    id: string;
     firstName: string;
     lastName: string;
   };
