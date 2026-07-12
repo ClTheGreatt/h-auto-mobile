@@ -373,6 +373,12 @@ export default function Profile() {
               onPress={() => router.push("/(app)/profile/about")}
               divider
             />
+            <MenuRow
+              icon="help-circle-outline"
+              label="Help & Documentation"
+              onPress={() => router.push("/(app)/profile/help")}
+              divider
+            />
           </View>
         </View>
 
