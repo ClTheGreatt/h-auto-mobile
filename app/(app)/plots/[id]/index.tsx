@@ -55,10 +55,27 @@ function formatRelativeTime(iso: string) {
 }
 
 export default function PlotDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, scrollTo } = useLocalSearchParams<{
+    id: string;
+    scrollTo?: string;
+  }>();
   const router = useRouter();
   const { data, isLoading, error, refetch } = usePlot(id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const [observationsY, setObservationsY] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (scrollTo === "observations" && observationsY != null && scrollRef.current) {
+      const t = setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: Math.max(0, observationsY - 12),
+          animated: true,
+        });
+      }, 300);
+      return () => clearTimeout(t);
+    }
+  }, [scrollTo, observationsY]);
 
   if (isLoading) {
     return (
@@ -95,7 +112,10 @@ export default function PlotDetail() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
       <CustomHeader title={plot.name} onBack={() => router.back()} />
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+      >
         {/* Status + location */}
         <View className="flex-row items-center gap-2 mb-4">
           <View className={`px-3 py-1 rounded-full ${statusStyle.bg}`}>
@@ -249,7 +269,10 @@ export default function PlotDetail() {
         </View>
 
         {/* Observations */}
-        <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3">
+        <View
+          onLayout={(e) => setObservationsY(e.nativeEvent.layout.y)}
+          className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3"
+        >
           <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
             Recent observations
           </Text>
@@ -312,6 +335,69 @@ export default function PlotDetail() {
                           🍃 {o.leafCount} leaves
                         </Text>
                       )}
+                    </View>
+                  )}
+                  {(o.soilMoisture != null ||
+                    o.temperature != null ||
+                    o.humidity != null ||
+                    o.lightIntensity != null ||
+                    o.nitrogen != null ||
+                    o.phosphorus != null ||
+                    o.potassium != null) && (
+                    <View className="mt-2 pt-2 border-t border-slate-100">
+                      <Text className="text-[10px] font-semibold text-slate-400 uppercase mb-1">
+                        Conditions at time of log
+                      </Text>
+                      <View className="flex-row flex-wrap gap-x-3 gap-y-1">
+                        {o.soilMoisture != null && (
+                          <View className="flex-row items-center gap-1">
+                            <Ionicons name="water" size={12} color="#60a5fa" />
+                            <Text className="text-xs text-slate-600">
+                              {o.soilMoisture.toFixed(0)}% soil
+                            </Text>
+                          </View>
+                        )}
+                        {o.temperature != null && (
+                          <View className="flex-row items-center gap-1">
+                            <Ionicons
+                              name="thermometer"
+                              size={12}
+                              color="#f87171"
+                            />
+                            <Text className="text-xs text-slate-600">
+                              {o.temperature.toFixed(1)}°C
+                            </Text>
+                          </View>
+                        )}
+                        {o.humidity != null && (
+                          <View className="flex-row items-center gap-1">
+                            <Ionicons name="cloud" size={12} color="#22d3ee" />
+                            <Text className="text-xs text-slate-600">
+                              {o.humidity.toFixed(0)}% humidity
+                            </Text>
+                          </View>
+                        )}
+                        {o.lightIntensity != null && (
+                          <View className="flex-row items-center gap-1">
+                            <Ionicons name="sunny" size={12} color="#fbbf24" />
+                            <Text className="text-xs text-slate-600">
+                              {o.lightIntensity.toFixed(0)} lux
+                            </Text>
+                          </View>
+                        )}
+                        {(o.nitrogen != null ||
+                          o.phosphorus != null ||
+                          o.potassium != null) && (
+                          <View className="flex-row items-center gap-1">
+                            <Ionicons name="flask" size={12} color="#4ade80" />
+                            <Text className="text-xs text-slate-600">
+                              NPK: {o.nitrogen?.toFixed(0) ?? "—"}/
+                              {o.phosphorus?.toFixed(0) ?? "—"}/
+                              {o.potassium?.toFixed(0) ?? "—"} mg/kg
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                   )}
                 </View>

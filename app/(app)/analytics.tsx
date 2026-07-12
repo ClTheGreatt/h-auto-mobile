@@ -1,8 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   Modal,
   Pressable,
   RefreshControl,
@@ -14,6 +17,7 @@ import { LineChart } from "react-native-chart-kit";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { G, Rect, Text as SvgText } from "react-native-svg";
 import { colors } from "../../constants/colors";
+import { api } from "../../lib/api";
 import { useAnalytics } from "../../lib/hooks/use-analytics";
 import { useMyPlots } from "../../lib/hooks/use-my-plots";
 
@@ -21,11 +25,28 @@ const screenWidth = Dimensions.get("window").width - 48;
 
 type Range = "24h" | "7d" | "30d" | "all";
 type Point = { label: string; value: number | null };
+type ActivityRow = {
+  label: string;
+  value: number | null;
+  bucketStart: string;
+};
 type AlertRow = {
   label: string;
   critical: number;
   warning: number;
   info: number;
+};
+type ObservationLogRow = {
+  id: string;
+  note: string | null;
+  createdAt: string;
+  stage: string | null;
+  author: { id: string; name: string; image: string | null };
+  plot: { id: string; name: string };
+};
+type ObservationsByDateResponse = {
+  day: string;
+  logs: ObservationLogRow[];
 };
 
 const RANGES: { key: Range; label: string }[] = [
@@ -268,9 +289,13 @@ export default function Analytics() {
             {/* Daily Activity */}
             <ChartCard
               title="Daily Activity"
-              subtitle="Observations — tap a bar"
+              subtitle="Observations — tap a bar to see who logged"
             >
-              <ActivityBars rows={data.observationsByDay} />
+              <ActivityBars
+                rows={data.observationsByDay}
+                bucketMs={data.bucketMs}
+                plotId={plotId}
+              />
             </ChartCard>
 
             {/* Alerts — custom tappable stacked bars */}
@@ -746,10 +771,17 @@ function AlertsBars({ rows }: { rows: AlertRow[] }) {
 
 function ActivityBars({
   rows,
+  bucketMs,
+  plotId,
 }: {
-  rows: { label: string; value: number | null }[];
+  rows: ActivityRow[];
+  bucketMs: number;
+  plotId: string | null;
 }) {
-  const [selected, setSelected] = useState<number | null>(null);
+  const [drillDown, setDrillDown] = useState<{
+    bucketStart: string;
+    label: string;
+  } | null>(null);
 
   const total = rows.reduce((s, r) => s + (r.value ?? 0), 0);
   if (rows.length === 0 || total === 0) {
@@ -765,33 +797,26 @@ function ActivityBars({
   const CHART_H = 180;
   const PLOT_H = CHART_H - 24;
   const labelStep = Math.max(1, Math.ceil(rows.length / 8));
-  const sel = selected != null ? rows[selected] : null;
 
   return (
     <View>
-      {sel ? (
-        <View className="bg-slate-800 rounded-lg px-3 py-2 mb-3 self-start">
-          <Text className="text-white text-xs font-semibold">{sel.label}</Text>
-          <Text className="text-green-300 text-xs mt-0.5">
-            {sel.value ?? 0} observation{(sel.value ?? 0) === 1 ? "" : "s"}
-          </Text>
-        </View>
-      ) : (
-        <Text className="text-xs text-slate-400 mb-3">
-          Tap a bar to see the count
-        </Text>
-      )}
+      <Text className="text-xs text-slate-400 mb-3">
+        Tap a bar to see who logged
+      </Text>
 
       {/* Bars — full width */}
       <View className="flex-row items-end" style={{ height: CHART_H }}>
         {rows.map((r, i) => {
           const v = r.value ?? 0;
           const barH = v > 0 ? Math.max((v / max) * PLOT_H, 6) : 0;
-          const active = selected == null || selected === i;
+          const active =
+            drillDown == null || drillDown.bucketStart === r.bucketStart;
           return (
             <Pressable
               key={i}
-              onPress={() => setSelected(selected === i ? null : i)}
+              onPress={() =>
+                setDrillDown({ bucketStart: r.bucketStart, label: r.label })
+              }
               style={{
                 flex: 1,
                 height: CHART_H,
@@ -843,7 +868,174 @@ function ActivityBars({
           ) : null,
         )}
       </View>
+
+      <ObservationsDrillDownModal
+        visible={drillDown != null}
+        onClose={() => setDrillDown(null)}
+        bucketStart={drillDown?.bucketStart ?? null}
+        label={drillDown?.label ?? ""}
+        bucketMs={bucketMs}
+        plotId={plotId}
+      />
     </View>
+  );
+}
+
+function ObservationsDrillDownModal({
+  visible,
+  onClose,
+  bucketStart,
+  bucketMs,
+  label,
+  plotId,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  bucketStart: string | null;
+  bucketMs: number;
+  label: string;
+  plotId: string | null;
+}) {
+  const router = useRouter();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["observations-by-date", bucketStart, bucketMs, plotId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set("bucketStart", bucketStart as string);
+      params.set("bucketMs", String(bucketMs));
+      if (plotId) params.set("plotId", plotId);
+      return api<ObservationsByDateResponse>(
+        `/api/mobile/me/analytics/observations-by-date?${params.toString()}`,
+      );
+    },
+    enabled: visible && bucketStart != null,
+  });
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable className="flex-1 bg-black/40 justify-end" onPress={onClose}>
+        <Pressable
+          className="bg-white rounded-t-3xl px-6 pt-4 pb-9"
+          onPress={() => {}}
+        >
+          <View className="items-center mb-3">
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: "#e2e8f0",
+              }}
+            />
+          </View>
+
+          <View className="flex-row items-center justify-between mb-4">
+            <Text
+              className="text-lg font-bold text-slate-900 flex-1 pr-2"
+              numberOfLines={1}
+            >
+              Observations · {data?.day ?? label}
+            </Text>
+            <Pressable
+              onPress={onClose}
+              className="w-8 h-8 items-center justify-center rounded-full active:bg-slate-100"
+            >
+              <Ionicons name="close" size={22} color={colors.text.primary} />
+            </Pressable>
+          </View>
+
+          {isLoading && (
+            <View className="items-center py-8">
+              <ActivityIndicator color={colors.brand[600]} />
+            </View>
+          )}
+
+          {!isLoading && error && (
+            <View className="bg-red-50 border border-red-200 rounded-2xl p-4">
+              <Text className="text-sm font-medium text-red-900">
+                Failed to load observations
+              </Text>
+              <Text className="text-xs text-red-700 mt-1">Pull to retry</Text>
+            </View>
+          )}
+
+          {!isLoading && !error && data && data.logs.length === 0 && (
+            <View className="items-center py-8">
+              <Text className="text-sm text-slate-400">
+                No observations logged this day.
+              </Text>
+            </View>
+          )}
+
+          {!isLoading && !error && data && data.logs.length > 0 && (
+            <ScrollView
+              style={{ maxHeight: 400 }}
+              contentContainerStyle={{ paddingBottom: 8 }}
+            >
+              {data.logs.map((log) => (
+                <Pressable
+                  key={log.id}
+                  className="flex-row items-center py-3 border-b border-slate-100 active:bg-slate-50"
+                  onPress={() => {
+                    onClose();
+                    router.push({
+                      pathname: "/(app)/plots/[id]",
+                      params: { id: log.plot.id, scrollTo: "observations" },
+                    });
+                  }}
+                >
+                  {log.author.image ? (
+                    <Image
+                      source={{ uri: log.author.image }}
+                      style={{ width: 32, height: 32, borderRadius: 16 }}
+                    />
+                  ) : (
+                    <View
+                      className="bg-brand-100 items-center justify-center"
+                      style={{ width: 32, height: 32, borderRadius: 16 }}
+                    >
+                      <Text className="text-brand-700 font-semibold text-sm">
+                        {log.author.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View className="flex-1 ml-3">
+                    <Text className="text-sm font-medium text-slate-900">
+                      {log.author.name}
+                    </Text>
+                    <Text className="text-xs text-slate-500">
+                      {log.plot.name}
+                    </Text>
+                    {log.note && (
+                      <Text
+                        className="text-xs text-slate-600 mt-0.5"
+                        numberOfLines={1}
+                      >
+                        {log.note}
+                      </Text>
+                    )}
+                  </View>
+                  <Text className="text-xs text-slate-400">
+                    {new Date(log.createdAt).toLocaleTimeString("en-PH", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                      timeZone: "Asia/Manila",
+                    })}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 

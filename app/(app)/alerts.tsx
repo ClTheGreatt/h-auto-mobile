@@ -63,6 +63,17 @@ function formatRelativeTime(iso: string) {
   return `${Math.floor(diffMin / 1440)}d ago`;
 }
 
+function formatResolvedDate(iso: string) {
+  return new Date(iso).toLocaleString("en-PH", {
+    timeZone: "Asia/Manila",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 function formatType(type: string) {
   return type
     .toLowerCase()
@@ -418,6 +429,38 @@ function AlertCard({
           <Text className="text-xs text-slate-400 mt-1.5">
             {formatRelativeTime(alert.createdAt)}
           </Text>
+          {alert.resolved && alert.resolvedAt && (
+            <Text className="text-xs text-green-600 mt-0.5">
+              Resolved · {formatResolvedDate(alert.resolvedAt)}
+            </Text>
+          )}
+          {alert.suggestionTitle && (
+            <View className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50 p-3">
+              <View className="flex-row items-center gap-1.5">
+                <Ionicons name="bulb" size={12} color="#047857" />
+                <Text className="text-[10px] font-semibold text-emerald-800 uppercase">
+                  Suggested action
+                </Text>
+              </View>
+              <Text className="mt-1 text-sm font-semibold text-emerald-900">
+                {alert.suggestionTitle}
+              </Text>
+              {alert.suggestionSteps.length > 0 && (
+                <View className="mt-1.5" style={{ gap: 2 }}>
+                  {alert.suggestionSteps.map((step, i) => (
+                    <View key={i} className="flex-row">
+                      <Text className="text-sm text-emerald-900/90 w-5">
+                        {i + 1}.
+                      </Text>
+                      <Text className="text-sm text-emerald-900/90 flex-1">
+                        {step}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.muted} />
       </View>

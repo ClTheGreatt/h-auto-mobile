@@ -44,3 +44,9 @@ app-example
 
 # Firebase service account key (SECRET — huwag i-commit)
 *firebase-adminsdk*.json
+
+
+# Environment secrets
+.env
+.env*
+!.env.example

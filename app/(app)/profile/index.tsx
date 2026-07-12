@@ -367,6 +367,12 @@ export default function Profile() {
               <Text className="text-xs text-slate-500">Version</Text>
               <Text className="text-xs text-slate-700 font-medium">1.0.0</Text>
             </View>
+            <MenuRow
+              icon="information-circle-outline"
+              label="View full About"
+              onPress={() => router.push("/(app)/profile/about")}
+              divider
+            />
           </View>
         </View>
 

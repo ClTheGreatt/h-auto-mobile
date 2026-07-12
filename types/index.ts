@@ -71,6 +71,13 @@ export type Observation = {
   id: string;
   plantHeightCm: number | null;
   leafCount: number | null;
+  soilMoisture: number | null;
+  temperature: number | null;
+  humidity: number | null;
+  lightIntensity: number | null;
+  nitrogen: number | null;
+  phosphorus: number | null;
+  potassium: number | null;
   observations: string | null;
   notes: string | null;
   createdAt: string;
@@ -127,6 +134,8 @@ export type AlertItem = {
     id: string;
     name: string;
   };
+  suggestionTitle: string | null;
+  suggestionSteps: string[];
 };
 
 export type DashboardData = {
@@ -160,6 +169,12 @@ export type UserStats = {
   lastLoginAt: string | null;
 };
 
+export type ActivityBucket = {
+  label: string;
+  value: number;
+  bucketStart: string;
+};
+
 export type AnalyticsData = {
   summary: {
     totalReadings: number;
@@ -173,6 +188,7 @@ export type AnalyticsData = {
     avgPotassium: number | null;
   };
   availableMonths?: string[];
+  bucketMs: number;
   alertsByDay: {
     availableMonths?: string[];
     label: string;
@@ -180,7 +196,7 @@ export type AnalyticsData = {
     warning: number;
     info: number;
   }[];
-  observationsByDay: { label: string; value: number }[];
+  observationsByDay: ActivityBucket[];
   soilMoistureByDay: { label: string; value: number }[];
   temperatureByDay: { label: string; value: number }[];
   humidityByDay: { label: string; value: number }[];

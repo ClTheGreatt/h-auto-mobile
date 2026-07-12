@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -20,12 +21,23 @@ import type { User } from "../../../types";
 
 type RoleOption = { value: string; label: string; description: string };
 type StatusOption = { value: string; label: string };
+type FormErrors = Record<string, string | undefined>;
 
 const STATUS_OPTIONS: StatusOption[] = [
   { value: "ACTIVE", label: "Active" },
   { value: "INACTIVE", label: "Inactive" },
   { value: "SUSPENDED", label: "Suspended" },
 ];
+
+const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
+
+function isValidEmailFormat(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function isValidPhone(v: string) {
+  return /^(09\d{9}|\+639\d{9})$/.test(v.trim());
+}
 
 export default function AddUser() {
   const router = useRouter();
@@ -52,12 +64,73 @@ export default function AddUser() {
   const [yearLevel, setYearLevel] = useState("");
   const [section, setSection] = useState("");
 
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [yearPickerOpen, setYearPickerOpen] = useState(false);
+
   useEffect(() => {
     getUser().then(setCurrentUser);
   }, []);
 
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const isStudent = role === "STUDENT_FARMER";
+  const isFaculty = role === "FACULTY";
+  const requiresIdNumber = isStudent || isFaculty;
+
+  function updateField<T extends string>(setter: (v: T) => void, key: string) {
+    return (v: T) => {
+      setter(v);
+      setErrors((prev) => {
+        if (!prev[key]) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    };
+  }
+
+  function validateForm(): FormErrors {
+    const e: FormErrors = {};
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!firstName.trim()) e.firstName = "This field is required";
+    if (!lastName.trim()) e.lastName = "This field is required";
+
+    if (!normalizedEmail) {
+      e.email = "This field is required";
+    } else if (!isValidEmailFormat(normalizedEmail)) {
+      e.email = "Invalid email format";
+    } else if (!normalizedEmail.endsWith("@bpsu.edu.ph")) {
+      e.email = "Must be a BPSU email (@bpsu.edu.ph)";
+    }
+
+    if (!password) {
+      e.password = "This field is required";
+    } else if (password.length < 8) {
+      e.password = "Password must be at least 8 characters";
+    } else if (!/[a-zA-Z]/.test(password)) {
+      e.password = "Password must contain at least one letter";
+    } else if (!/\d/.test(password)) {
+      e.password = "Password must contain at least one number";
+    }
+
+    if (isStudent) {
+      if (!idNumber.trim()) e.idNumber = "This field is required";
+      if (!phoneNumber.trim()) {
+        e.phoneNumber = "This field is required";
+      } else if (!isValidPhone(phoneNumber)) {
+        e.phoneNumber = "Phone must be 09XXXXXXXXX or +639XXXXXXXXX";
+      }
+      if (!course.trim()) e.course = "This field is required";
+      if (!yearLevel.trim()) e.yearLevel = "This field is required";
+      if (!section.trim()) e.section = "This field is required";
+    } else if (isFaculty) {
+      if (!idNumber.trim()) e.idNumber = "This field is required";
+      if (!department.trim()) e.department = "This field is required";
+      if (!position.trim()) e.position = "This field is required";
+    }
+
+    return e;
+  }
 
   const roleOptions: RoleOption[] = [
     {
@@ -84,6 +157,7 @@ export default function AddUser() {
   // Clear fields that don't apply to the newly selected role
   function handleRoleChange(value: string) {
     setRole(value);
+    setErrors({});
     if (value === "STUDENT_FARMER") {
       setDepartment("");
       setPosition("");
@@ -95,22 +169,11 @@ export default function AddUser() {
   }
 
   function handleSubmit() {
-    if (!email.trim() || !firstName.trim() || !lastName.trim() || !password) {
-      Alert.alert("Missing info", "Please fill in all required fields.");
-      return;
-    }
-    if (password.length < 6) {
-      Alert.alert("Weak password", "Password must be at least 6 characters.");
-      return;
-    }
+    const validationErrors = validateForm();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail.endsWith("@bpsu.edu.ph")) {
-      Alert.alert(
-        "Invalid email",
-        "Email must use the BPSU domain (@bpsu.edu.ph).",
-      );
-      return;
-    }
 
     createUser.mutate(
       {
@@ -143,6 +206,10 @@ export default function AddUser() {
           );
         },
         onError: (err: any) => {
+          const fieldErrors = err?.data?.fieldErrors;
+          if (fieldErrors && typeof fieldErrors === "object") {
+            setErrors((prev) => ({ ...prev, ...fieldErrors }));
+          }
           Alert.alert("Could not create user", err?.message ?? "Try again");
         },
       },
@@ -248,16 +315,18 @@ export default function AddUser() {
           <Field
             label="Email *"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={updateField(setEmail, "email")}
             keyboardType="email-address"
             placeholder="user@bpsu.edu.ph"
             autoCapitalize="none"
+            error={errors.email}
           />
           <Field
             label="First name *"
             value={firstName}
-            onChangeText={setFirstName}
+            onChangeText={updateField(setFirstName, "firstName")}
             autoCapitalize="words"
+            error={errors.firstName}
           />
           <Field
             label="Middle name"
@@ -268,8 +337,9 @@ export default function AddUser() {
           <Field
             label="Last name *"
             value={lastName}
-            onChangeText={setLastName}
+            onChangeText={updateField(setLastName, "lastName")}
             autoCapitalize="words"
+            error={errors.lastName}
           />
 
           {/* Password */}
@@ -278,14 +348,16 @@ export default function AddUser() {
           </Text>
           <View className="relative mb-1">
             <TextInput
-              className="bg-white border border-slate-200 rounded-lg px-4 py-3 pr-12 text-base text-slate-900"
+              className={`bg-white border rounded-lg px-4 py-3 pr-12 text-base text-slate-900 ${
+                errors.password ? "border-red-400" : "border-slate-200"
+              }`}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={updateField(setPassword, "password")}
               secureTextEntry={!showPwd}
               autoCapitalize="none"
               autoCorrect={false}
               spellCheck={false}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               placeholderTextColor="#94a3b8"
             />
             <Pressable
@@ -299,62 +371,101 @@ export default function AddUser() {
               />
             </Pressable>
           </View>
-          <Text className="text-xs text-slate-400 mb-5">
-            User can change this after first login.
-          </Text>
+          {errors.password ? (
+            <Text className="text-xs text-red-600 mt-1 mb-5">
+              {errors.password}
+            </Text>
+          ) : (
+            <Text className="text-xs text-slate-400 mb-5">
+              At least 8 characters with a letter and a number
+            </Text>
+          )}
 
           {/* Details */}
           <Text className="text-xs font-semibold text-slate-500 uppercase mb-2">
             Details
           </Text>
           <Field
-            label="ID number"
+            label={`${isStudent ? "ID number" : "Employee ID"}${
+              requiresIdNumber ? " *" : ""
+            }`}
             value={idNumber}
-            onChangeText={setIdNumber}
-            placeholder="20-12345"
-          />
-          <Field
-            label="Phone"
-            value={phoneNumber}
-            onChangeText={setPhoneNumber}
-            keyboardType="phone-pad"
-            placeholder="+639XXXXXXXXX"
+            onChangeText={updateField(setIdNumber, "idNumber")}
+            placeholder={isStudent ? "20-12345" : "EMP-2024-001"}
+            error={errors.idNumber}
           />
 
           {isStudent ? (
             <>
               <Field
-                label="Course"
+                label="Phone *"
+                value={phoneNumber}
+                onChangeText={updateField(setPhoneNumber, "phoneNumber")}
+                keyboardType="phone-pad"
+                placeholder="09XXXXXXXXX or +639XXXXXXXXX"
+                error={errors.phoneNumber}
+              />
+              <Field
+                label="Course *"
                 value={course}
-                onChangeText={setCourse}
+                onChangeText={updateField(setCourse, "course")}
                 placeholder="BS Information Technology"
+                error={errors.course}
               />
+
+              <View className="mb-3">
+                <Text className="text-xs font-medium text-slate-600 mb-1.5">
+                  Year level *
+                </Text>
+                <Pressable
+                  onPress={() => setYearPickerOpen(true)}
+                  className={`bg-white border rounded-lg px-4 py-3 flex-row items-center justify-between ${
+                    errors.yearLevel ? "border-red-400" : "border-slate-200"
+                  }`}
+                >
+                  <Text
+                    className={`text-base ${
+                      yearLevel ? "text-slate-900" : "text-slate-400"
+                    }`}
+                  >
+                    {yearLevel || "Select year level"}
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={18}
+                    color={colors.text.muted}
+                  />
+                </Pressable>
+                {errors.yearLevel && (
+                  <Text className="text-xs text-red-600 mt-1">
+                    {errors.yearLevel}
+                  </Text>
+                )}
+              </View>
+
               <Field
-                label="Year level"
-                value={yearLevel}
-                onChangeText={setYearLevel}
-                placeholder="3rd Year"
-              />
-              <Field
-                label="Section"
+                label="Section *"
                 value={section}
-                onChangeText={setSection}
+                onChangeText={updateField(setSection, "section")}
                 placeholder="BSIT-3A"
+                error={errors.section}
               />
             </>
           ) : (
             <>
               <Field
-                label="Department"
+                label={`Department${isFaculty ? " *" : ""}`}
                 value={department}
-                onChangeText={setDepartment}
+                onChangeText={updateField(setDepartment, "department")}
                 placeholder="College of Computer Studies"
+                error={errors.department}
               />
               <Field
-                label="Position"
+                label={`Position${isFaculty ? " *" : ""}`}
                 value={position}
-                onChangeText={setPosition}
+                onChangeText={updateField(setPosition, "position")}
                 placeholder="Instructor"
+                error={errors.position}
               />
             </>
           )}
@@ -380,6 +491,13 @@ export default function AddUser() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <YearLevelPickerModal
+        visible={yearPickerOpen}
+        onClose={() => setYearPickerOpen(false)}
+        value={yearLevel}
+        onSelect={updateField(setYearLevel, "yearLevel")}
+      />
     </SafeAreaView>
   );
 }
@@ -391,6 +509,7 @@ function Field({
   keyboardType,
   placeholder,
   autoCapitalize,
+  error,
 }: {
   label: string;
   value: string;
@@ -398,12 +517,15 @@ function Field({
   keyboardType?: "default" | "phone-pad" | "email-address";
   placeholder?: string;
   autoCapitalize?: "none" | "sentences" | "words";
+  error?: string;
 }) {
   return (
     <View className="mb-3">
       <Text className="text-xs font-medium text-slate-600 mb-1.5">{label}</Text>
       <TextInput
-        className="bg-white border border-slate-200 rounded-lg px-4 py-3 text-base text-slate-900"
+        className={`bg-white border rounded-lg px-4 py-3 text-base text-slate-900 ${
+          error ? "border-red-400" : "border-slate-200"
+        }`}
         value={value}
         onChangeText={onChangeText}
         keyboardType={keyboardType}
@@ -412,6 +534,78 @@ function Field({
         autoCapitalize={autoCapitalize ?? "sentences"}
         autoCorrect={false}
       />
+      {error && <Text className="text-xs text-red-600 mt-1">{error}</Text>}
     </View>
+  );
+}
+
+function YearLevelPickerModal({
+  visible,
+  onClose,
+  value,
+  onSelect,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  value: string;
+  onSelect: (v: string) => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable className="flex-1 bg-black/40 justify-end" onPress={onClose}>
+        <Pressable
+          className="bg-white rounded-t-3xl px-6 pt-4 pb-9"
+          onPress={() => {}}
+        >
+          <View className="items-center mb-3">
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: "#e2e8f0",
+              }}
+            />
+          </View>
+
+          <Text className="text-lg font-bold text-slate-900 mb-4">
+            Select year level
+          </Text>
+
+          <View style={{ gap: 8 }}>
+            {YEAR_LEVELS.map((lvl) => {
+              const isSel = value === lvl;
+              return (
+                <Pressable
+                  key={lvl}
+                  onPress={() => {
+                    onSelect(lvl);
+                    onClose();
+                  }}
+                  className={`py-3.5 px-4 rounded-xl items-center border ${
+                    isSel
+                      ? "bg-brand-600 border-brand-600"
+                      : "bg-white border-slate-200"
+                  } active:opacity-80`}
+                >
+                  <Text
+                    className={`text-sm font-medium ${
+                      isSel ? "text-white" : "text-slate-700"
+                    }`}
+                  >
+                    {lvl}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }

@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
+import { colors } from "../../constants/colors";
 import { api } from "../../lib/api";
 import { saveToken, saveUser } from "../../lib/auth";
 import {
@@ -26,6 +28,7 @@ export default function Login() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -150,23 +153,35 @@ export default function Login() {
               <Text className="text-xs font-medium text-slate-700 mb-1.5">
                 Password
               </Text>
-              <TextInput
-                className="bg-stone-50 border border-slate-200 rounded-lg px-4 py-3 text-base text-slate-900"
-                placeholder="••••••••"
-                placeholderTextColor="#94a3b8"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
+              <View className="relative">
+                <TextInput
+                  className="bg-stone-50 border border-slate-200 rounded-lg px-4 py-3 pr-12 text-base text-slate-900"
+                  placeholder="••••••••"
+                  placeholderTextColor="#94a3b8"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={secureTextEntry}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
+                <Pressable
+                  onPress={() => setSecureTextEntry(!secureTextEntry)}
+                  className="absolute right-3 top-0 bottom-0 justify-center"
+                >
+                  <Ionicons
+                    name={secureTextEntry ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={colors.text.muted}
+                  />
+                </Pressable>
+              </View>
             </View>
 
             {/* Error */}
             {error && (
-              <View className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-4">
-                <Text className="text-xs text-red-700">{error}</Text>
+              <View className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                <Text className="text-sm text-red-800">{error}</Text>
               </View>
             )}
 
