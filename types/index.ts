@@ -220,3 +220,13 @@ export type UserListItem = {
   lastLoginAt: string | null;
   createdAt: string;
 };
+
+export type UserDetail = UserListItem & {
+  middleName: string | null;
+  phoneNumber: string | null;
+  course: string | null;
+  yearLevel: string | null;
+  section: string | null;
+  position: string | null;
+  updatedAt: string;
+};

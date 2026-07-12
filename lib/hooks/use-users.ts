@@ -1,11 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UserListItem } from "../../types";
+import type { UserDetail, UserListItem } from "../../types";
 import { api } from "../api";
 
 export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: () => api<{ users: UserListItem[] }>("/api/mobile/me/users"),
+  });
+}
+
+export function useUser(id: string | null) {
+  return useQuery({
+    queryKey: ["users", id],
+    queryFn: () => api<{ user: UserDetail }>(`/api/mobile/me/users/${id}`),
+    enabled: !!id,
   });
 }
 
