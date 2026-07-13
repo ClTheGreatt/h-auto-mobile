@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UserDetail, UserListItem } from "../../types";
+import type { StudentListItem, UserDetail, UserListItem } from "../../types";
 import { api } from "../api";
 
 export function useUsers() {
@@ -14,6 +14,17 @@ export function useUser(id: string | null) {
     queryKey: ["users", id],
     queryFn: () => api<{ user: UserDetail }>(`/api/mobile/me/users/${id}`),
     enabled: !!id,
+  });
+}
+
+// Active students only — for the plot-assignment student picker.
+export function useStudents() {
+  return useQuery({
+    queryKey: ["users", "students"],
+    queryFn: () =>
+      api<{ users: StudentListItem[] }>(
+        "/api/mobile/me/users?role=STUDENT_FARMER&status=ACTIVE",
+      ),
   });
 }
 

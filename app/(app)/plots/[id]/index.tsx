@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PlotAssignmentsCard } from "../../../../components/plots/PlotAssignmentsCard";
 import { colors } from "../../../../constants/colors";
 import { getUser } from "../../../../lib/auth";
 import { useDeleteObservation } from "../../../../lib/hooks/use-delete-observation";
@@ -189,6 +190,9 @@ export default function PlotDetail() {
             </View>
           </View>
         )}
+
+        {/* Monitoring assignments */}
+        <PlotAssignmentsCard plotId={plot.id} currentUser={currentUser} />
 
         {/* Dates card */}
         <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3">

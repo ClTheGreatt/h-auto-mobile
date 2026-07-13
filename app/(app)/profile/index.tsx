@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQueryClient } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
@@ -25,17 +26,12 @@ import {
   isBiometricEnabled,
   saveBiometricPreference,
 } from "../../../lib/biometric";
+import { formatMemberSince } from "../../../lib/format-date";
 import { useStats } from "../../../lib/hooks/use-stats";
 import { useUploadAvatar } from "../../../lib/hooks/use-upload-avatar";
+import { formatRoleLabel } from "../../../lib/permissions";
 import { unregisterPushToken } from "../../../lib/push";
 import type { User } from "../../../types";
-
-const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
-  ADMIN: "Admin",
-  FACULTY: "Faculty",
-  STUDENT_FARMER: "Student Farmer",
-};
 
 export default function Profile() {
   const router = useRouter();
@@ -194,18 +190,27 @@ export default function Profile() {
                   className="w-24 h-24 rounded-full bg-stone-100"
                 />
               ) : (
-                <View className="w-24 h-24 rounded-full bg-brand-100 items-center justify-center">
+                <LinearGradient
+                  colors={["#DCFCE7", "#BBF7D0"]}
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
                   <Text className="text-3xl font-semibold text-brand-700">
                     {user.firstName[0]}
                     {user.lastName[0]}
                   </Text>
-                </View>
+                </LinearGradient>
               )}
-              <View className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-600 items-center justify-center border-2 border-white">
+              <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 items-center justify-center shadow-sm">
                 {uploadAvatar.isPending ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <ActivityIndicator size="small" color={colors.text.primary} />
                 ) : (
-                  <Ionicons name="camera" size={16} color="white" />
+                  <Ionicons name="camera" size={14} color={colors.text.primary} />
                 )}
               </View>
             </Pressable>
@@ -215,7 +220,7 @@ export default function Profile() {
             <Text className="text-sm text-slate-500 mt-0.5">{user.email}</Text>
             <View className="mt-3 px-3 py-1 rounded-full bg-brand-100">
               <Text className="text-xs font-medium text-brand-700">
-                {ROLE_LABELS[user.role] ?? user.role}
+                {formatRoleLabel(user.role)}
               </Text>
             </View>
           </View>
@@ -242,8 +247,8 @@ export default function Profile() {
               icon="leaf"
             />
             <StatTile
-              label="Days Active"
-              value={stats?.daysActive ?? 0}
+              label="Member since"
+              value={formatMemberSince(stats?.memberSince)}
               icon="calendar"
             />
           </View>
@@ -402,7 +407,7 @@ function StatTile({
   icon,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: keyof typeof Ionicons.glyphMap;
 }) {
   return (

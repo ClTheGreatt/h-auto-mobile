@@ -231,3 +231,28 @@ export type UserDetail = UserListItem & {
   position: string | null;
   updatedAt: string;
 };
+
+export type StudentListItem = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  course: string | null;
+  yearLevel: string | null;
+  section: string | null;
+  profileImage: string | null;
+};
+
+export type PlotAssignment = {
+  id: string;
+  studentId: string;
+  facultyId: string;
+  notes: string | null;
+  assignedAt: string;
+  student: StudentListItem;
+  faculty: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+};

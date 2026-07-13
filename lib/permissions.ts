@@ -26,3 +26,15 @@ export function canDeleteLog(
     currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN";
   return isAuthor || isAdmin;
 }
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  ADMIN: "Admin",
+  FACULTY: "Faculty",
+  STUDENT_FARMER: "Student Farmer",
+};
+
+// Ang full, consistent display label ng isang role sa buong app.
+export function formatRoleLabel(role: string): string {
+  return ROLE_LABELS[role] ?? role;
+}
