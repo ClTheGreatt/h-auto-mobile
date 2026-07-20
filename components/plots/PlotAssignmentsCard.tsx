@@ -7,7 +7,7 @@ import {
   usePlotAssignments,
   useUnassignStudent,
 } from "../../lib/hooks/use-plot-assignments";
-import type { PlotAssignment, StudentListItem, User } from "../../types";
+import type { PlotAssignment, StudentListItem } from "../../types";
 import { StudentPickerSheet } from "../StudentPickerSheet";
 
 function formatRelativeTime(iso: string) {
@@ -22,26 +22,23 @@ function formatRelativeTime(iso: string) {
 
 export function PlotAssignmentsCard({
   plotId,
-  currentUser,
+  canManageAssignments,
+  adviser,
 }: {
   plotId: string;
-  currentUser: User | null;
+  canManageAssignments: boolean;
+  adviser: { id: string; firstName: string; lastName: string } | null;
 }) {
   const { data, isLoading } = usePlotAssignments(plotId);
   const assignStudent = useAssignStudent();
   const unassignStudent = useUnassignStudent();
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const isStaff =
-    currentUser?.role === "FACULTY" ||
-    currentUser?.role === "ADMIN" ||
-    currentUser?.role === "SUPER_ADMIN";
-
   const assignments = data?.assignments ?? [];
 
   // Students only ever see this card if they're actually assigned to the
   // plot (an empty list for a student means "not assigned" — hide it).
-  if (!isStaff && assignments.length === 0) return null;
+  if (!canManageAssignments && assignments.length === 0) return null;
 
   if (isLoading) {
     return (
@@ -92,7 +89,7 @@ export function PlotAssignmentsCard({
 
   return (
     <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3">
-      <View className="flex-row items-center justify-between mb-3">
+      <View className="flex-row items-center justify-between mb-1">
         <Text className="text-xs font-semibold text-slate-500 uppercase">
           Monitoring Assignments
         </Text>
@@ -105,6 +102,12 @@ export function PlotAssignmentsCard({
         )}
       </View>
 
+      <Text className="text-xs text-slate-400 mb-3">
+        {adviser
+          ? `Adviser: ${adviser.firstName} ${adviser.lastName}`
+          : "No adviser assigned"}
+      </Text>
+
       {assignments.length === 0 ? (
         <Text className="text-sm text-slate-500 text-center py-2">
           No students assigned yet.
@@ -115,14 +118,14 @@ export function PlotAssignmentsCard({
             <AssignmentRow
               key={a.id}
               assignment={a}
-              canRemove={isStaff}
+              canRemove={canManageAssignments}
               onRemove={() => handleRemove(a)}
             />
           ))}
         </View>
       )}
 
-      {isStaff && (
+      {canManageAssignments && (
         <Pressable
           onPress={() => setPickerOpen(true)}
           className="flex-row items-center justify-center gap-1.5 mt-3 pt-3 border-t border-slate-100 active:opacity-70"

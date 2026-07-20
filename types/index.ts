@@ -27,7 +27,8 @@ export type PlotStatus =
   | "GROWING"
   | "READY_FOR_HARVEST"
   | "HARVESTED"
-  | "FALLOW";
+  | "FALLOW"
+  | "ARCHIVED";
 
 export type Plot = {
   id: string;
@@ -111,6 +112,8 @@ export type PlotDetail = {
     name: string;
     orderIndex: number;
   } | null;
+  adviser: { id: string; firstName: string; lastName: string } | null;
+  canManageAssignments: boolean;
   device: {
     deviceCode: string;
     status: string;

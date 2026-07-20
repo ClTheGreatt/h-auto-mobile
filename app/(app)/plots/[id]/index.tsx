@@ -119,6 +119,9 @@ export default function PlotDetail() {
 
   const plot = data.plot;
   const statusStyle = STATUS_COLORS[plot.status] ?? STATUS_COLORS.PREPARING;
+  const isHarvested = plot.status === "HARVESTED";
+  const isArchived = plot.status === "ARCHIVED";
+  const loggingPaused = isHarvested || isArchived;
 
   function handleDeleteObservation(logId: string) {
     Alert.alert(
@@ -192,7 +195,11 @@ export default function PlotDetail() {
         )}
 
         {/* Monitoring assignments */}
-        <PlotAssignmentsCard plotId={plot.id} currentUser={currentUser} />
+        <PlotAssignmentsCard
+          plotId={plot.id}
+          canManageAssignments={plot.canManageAssignments}
+          adviser={plot.adviser}
+        />
 
         {/* Dates card */}
         <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3">
@@ -461,17 +468,32 @@ export default function PlotDetail() {
 
       {/* Sticky CTA */}
       <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4">
-        <Pressable
-          onPress={() => router.push(`/(app)/plots/${plot.id}/log`)}
-          className="bg-brand-600 rounded-xl py-3.5 items-center active:bg-brand-700"
-        >
-          <View className="flex-row items-center gap-2">
-            <Ionicons name="add-circle" size={20} color="white" />
-            <Text className="text-white font-semibold text-base">
-              Log observation
+        {loggingPaused ? (
+          <View className="flex-row items-center justify-center gap-2 py-2">
+            <Ionicons
+              name="information-circle-outline"
+              size={18}
+              color={colors.text.muted}
+            />
+            <Text className="text-sm text-slate-500 text-center">
+              {isHarvested
+                ? "This plot is harvested — logging is paused."
+                : "This plot is archived — logging is paused."}
             </Text>
           </View>
-        </Pressable>
+        ) : (
+          <Pressable
+            onPress={() => router.push(`/(app)/plots/${plot.id}/log`)}
+            className="bg-brand-600 rounded-xl py-3.5 items-center active:bg-brand-700"
+          >
+            <View className="flex-row items-center gap-2">
+              <Ionicons name="add-circle" size={20} color="white" />
+              <Text className="text-white font-semibold text-base">
+                Log observation
+              </Text>
+            </View>
+          </Pressable>
+        )}
       </View>
 
       {/* Photo preview modal ← ADD THIS WHOLE BLOCK */}
