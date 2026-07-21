@@ -222,7 +222,7 @@ export default function PlotDetail() {
               Latest reading
             </Text>
             <View className="flex-row items-center gap-2">
-              {plot.latestReading && <LiveDot />}
+              {plot.latestReading && <LiveDot online={plot.deviceOnline} />}
               {plot.latestReading && (
                 <Text className="text-xs text-slate-400">
                   {formatRelativeTime(plot.latestReading.recordedAt)}
@@ -576,10 +576,11 @@ function MetricTile({
     </View>
   );
 }
-function LiveDot() {
+function LiveDot({ online }: { online: boolean }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    if (!online) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -596,7 +597,23 @@ function LiveDot() {
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse]);
+  }, [pulse, online]);
+
+  if (!online) {
+    return (
+      <View className="flex-row items-center gap-1.5">
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: colors.text.muted,
+          }}
+        />
+        <Text className="text-xs font-medium text-slate-400">Offline</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-row items-center gap-1.5">

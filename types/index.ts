@@ -119,6 +119,7 @@ export type PlotDetail = {
     status: string;
     lastSeenAt: string | null;
   } | null;
+  deviceOnline: boolean;
   latestReading: SensorReading | null;
   openAlertsCount: number;
   observations: Observation[];
