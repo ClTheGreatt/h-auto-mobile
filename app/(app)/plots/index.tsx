@@ -36,6 +36,15 @@ const STATUS_COLORS: Record<
   FALLOW: { bg: "bg-stone-100", text: "text-stone-700", label: "Fallow" },
 };
 
+// Mirrors web's ACTIVE_STATUSES / COMPLETED_STATUSES buckets exactly.
+const ACTIVE_STATUSES = [
+  "PREPARING",
+  "PLANTED",
+  "GROWING",
+  "READY_FOR_HARVEST",
+] as const;
+const COMPLETED_STATUSES = ["HARVESTED", "FALLOW"] as const;
+
 export default function Plots() {
   const [user, setUser] = useState<User | null>(null);
   const { data, isLoading, refetch, error } = useMyPlots();
@@ -43,7 +52,7 @@ export default function Plots() {
 
   // Filters
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [view, setView] = useState<"active" | "completed">("active");
 
   useEffect(() => {
     getUser().then(setUser);
@@ -57,30 +66,22 @@ export default function Plots() {
 
   const plots = data?.plots ?? [];
 
-  // Status chips: "All" + only the statuses that actually exist in the data
-  const statusChips = useMemo(() => {
-    const present = Array.from(new Set(plots.map((p) => p.status)));
-    return [
-      { key: "ALL", label: "All" },
-      ...present.map((s) => ({
-        key: s,
-        label: STATUS_COLORS[s]?.label ?? s,
-      })),
-    ];
-  }, [plots]);
+  const viewPlots = useMemo(() => {
+    const bucket = view === "completed" ? COMPLETED_STATUSES : ACTIVE_STATUSES;
+    return plots.filter((p) => (bucket as readonly string[]).includes(p.status));
+  }, [plots, view]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return plots.filter((p) => {
+    return viewPlots.filter((p) => {
       const matchesQuery =
         !q ||
         p.name.toLowerCase().includes(q) ||
         (p.location?.toLowerCase().includes(q) ?? false) ||
         (p.cropName?.toLowerCase().includes(q) ?? false);
-      const matchesStatus = statusFilter === "ALL" || p.status === statusFilter;
-      return matchesQuery && matchesStatus;
+      return matchesQuery;
     });
-  }, [plots, query, statusFilter]);
+  }, [viewPlots, query]);
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
@@ -94,13 +95,13 @@ export default function Plots() {
         </Text>
         <Text className="text-sm text-slate-500 mt-0.5">
           {filtered.length} {filtered.length === 1 ? "plot" : "plots"}
-          {(query.trim() || statusFilter !== "ALL") && plots.length > 0
-            ? ` of ${plots.length}`
+          {query.trim() && viewPlots.length > 0
+            ? ` of ${viewPlots.length}`
             : ""}
         </Text>
       </View>
 
-      {/* Search + filters */}
+      {/* Search + tabs */}
       {!isLoading && !error && plots.length > 0 && (
         <View className="px-6 pb-2">
           <View className="flex-row items-center bg-white border border-slate-200 rounded-xl px-3 mb-3">
@@ -130,12 +131,12 @@ export default function Plots() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8 }}
           >
-            {statusChips.map((chip) => {
-              const active = statusFilter === chip.key;
+            {(["active", "completed"] as const).map((v) => {
+              const active = view === v;
               return (
                 <Pressable
-                  key={chip.key}
-                  onPress={() => setStatusFilter(chip.key)}
+                  key={v}
+                  onPress={() => setView(v)}
                   className={`px-3.5 py-1.5 rounded-full border ${
                     active
                       ? "bg-brand-600 border-brand-600"
@@ -147,7 +148,7 @@ export default function Plots() {
                       active ? "text-white" : "text-slate-600"
                     }`}
                   >
-                    {chip.label}
+                    {v === "active" ? "Active" : "Completed"}
                   </Text>
                 </Pressable>
               );
@@ -195,7 +196,25 @@ export default function Plots() {
           </View>
         )}
 
-        {!isLoading && !error && plots.length > 0 && filtered.length === 0 && (
+        {!isLoading && !error && plots.length > 0 && viewPlots.length === 0 && (
+          <View className="items-center py-16">
+            <Ionicons
+              name={view === "completed" ? "checkmark-done-outline" : "leaf-outline"}
+              size={48}
+              color={colors.text.muted}
+            />
+            <Text className="text-base font-medium text-slate-700 mt-4">
+              {view === "completed" ? "No completed plots yet" : "No active plots"}
+            </Text>
+            <Text className="text-sm text-slate-500 mt-1 text-center">
+              {view === "completed"
+                ? "Harvested or fallow plots will appear here."
+                : "Plots in progress will appear here."}
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && !error && viewPlots.length > 0 && filtered.length === 0 && (
           <View className="items-center py-16">
             <Ionicons name="search" size={48} color={colors.text.muted} />
             <Text className="text-base font-medium text-slate-700 mt-4">
