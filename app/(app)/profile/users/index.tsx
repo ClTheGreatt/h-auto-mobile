@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -11,11 +10,16 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { STATUS_META } from "../../../../components/StatusChangeSheet";
+import { StudentFarmerSection } from "../../../../components/StudentFarmerSection";
+import { UserListRow } from "../../../../components/UserListRow";
 import { colors } from "../../../../constants/colors";
-import { useUsers } from "../../../../lib/hooks/use-users";
+import { groupStudents } from "../../../../lib/group-students";
+import { useUsers, type UsersView } from "../../../../lib/hooks/use-users";
 import type { UserListItem } from "../../../../types";
 
+// Student Farmer rows are rendered via StudentFarmerSection's Course >
+// Year > Section grouping instead of a flat list — everyone else stays a
+// flat role section, same as before.
 const ROLE_META: Record<string, { label: string; color: string; bg: string }> =
   {
     SUPER_ADMIN: {
@@ -25,16 +29,14 @@ const ROLE_META: Record<string, { label: string; color: string; bg: string }> =
     },
     ADMIN: { label: "Admin", color: "#2563eb", bg: "bg-blue-100" },
     FACULTY: { label: "Faculty", color: "#d97706", bg: "bg-amber-100" },
-    STUDENT_FARMER: {
-      label: "Student Farmer",
-      color: "#16a34a",
-      bg: "bg-brand-100",
-    },
   };
+
+const FLAT_ROLE_ORDER = ["SUPER_ADMIN", "ADMIN", "FACULTY"];
 
 export default function Users() {
   const router = useRouter();
-  const { data, isLoading, refetch, error } = useUsers();
+  const [view, setView] = useState<UsersView>("active");
+  const { data, isLoading, refetch, error } = useUsers(view);
   const [refreshing, setRefreshing] = useState(false);
 
   async function handleRefresh() {
@@ -43,14 +45,17 @@ export default function Users() {
     setRefreshing(false);
   }
 
+  function goToUser(user: UserListItem) {
+    router.push(`/(app)/profile/users/${user.id}`);
+  }
+
   const users = data?.users ?? [];
   const groupedByRole: Record<string, UserListItem[]> = {};
   for (const u of users) {
     if (!groupedByRole[u.role]) groupedByRole[u.role] = [];
     groupedByRole[u.role].push(u);
   }
-
-  const roleOrder = ["SUPER_ADMIN", "ADMIN", "FACULTY", "STUDENT_FARMER"];
+  const courseGroups = groupStudents(groupedByRole.STUDENT_FARMER ?? []);
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
@@ -87,6 +92,35 @@ export default function Users() {
         </View>
       </View>
 
+      {/* Active/Graduated tabs — mirrors the web Users page */}
+      <View className="flex-row px-5 pt-3" style={{ gap: 8 }}>
+        {(
+          [
+            { value: "active" as const, label: "Active" },
+            { value: "graduated" as const, label: "Graduated" },
+          ]
+        ).map((tab) => {
+          const active = view === tab.value;
+          return (
+            <Pressable
+              key={tab.value}
+              onPress={() => setView(tab.value)}
+              className={`px-3 py-1.5 rounded-lg ${
+                active ? "bg-brand-100" : ""
+              }`}
+            >
+              <Text
+                className={`text-sm font-medium ${
+                  active ? "text-brand-700" : "text-slate-500"
+                }`}
+              >
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
         refreshControl={
@@ -111,91 +145,43 @@ export default function Users() {
           </View>
         )}
 
-        {!isLoading &&
-          roleOrder.map((role) => {
-            const list = groupedByRole[role];
-            if (!list || list.length === 0) return null;
-            const meta = ROLE_META[role];
-            return (
-              <View key={role} className="mb-5">
-                <View className="flex-row items-center mb-3">
-                  <Text className="text-xs font-semibold text-slate-500 uppercase">
-                    {meta.label}
-                  </Text>
-                  <Text className="text-xs text-slate-400 ml-2">
-                    · {list.length}
-                  </Text>
+        {!isLoading && !error && (
+          <>
+            {FLAT_ROLE_ORDER.map((role) => {
+              const list = groupedByRole[role];
+              if (!list || list.length === 0) return null;
+              const meta = ROLE_META[role];
+              return (
+                <View key={role} className="mb-5">
+                  <View className="flex-row items-center mb-3">
+                    <Text className="text-xs font-semibold text-slate-500 uppercase">
+                      {meta.label}
+                    </Text>
+                    <Text className="text-xs text-slate-400 ml-2">
+                      · {list.length}
+                    </Text>
+                  </View>
+                  <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    {list.map((u, idx) => (
+                      <UserListRow
+                        key={u.id}
+                        user={u}
+                        divider={idx < list.length - 1}
+                        onPress={() => goToUser(u)}
+                      />
+                    ))}
+                  </View>
                 </View>
-                <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  {list.map((u, idx) => (
-                    <UserRow
-                      key={u.id}
-                      user={u}
-                      divider={idx < list.length - 1}
-                      onPress={() => router.push(`/(app)/profile/users/${u.id}`)}
-                    />
-                  ))}
-                </View>
-              </View>
-            );
-          })}
+              );
+            })}
+
+            <StudentFarmerSection
+              courseGroups={courseGroups}
+              onPressUser={goToUser}
+            />
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function UserRow({
-  user,
-  divider,
-  onPress,
-}: {
-  user: UserListItem;
-  divider: boolean;
-  onPress?: () => void;
-}) {
-  const status = STATUS_META[user.status] ?? STATUS_META.ACTIVE;
-  return (
-    <Pressable
-      onPress={onPress}
-      className={`flex-row items-center p-4 active:bg-slate-50 ${
-        divider ? "border-b border-slate-100" : ""
-      }`}
-    >
-      {user.profileImage ? (
-        <Image
-          source={{ uri: user.profileImage }}
-          className="w-11 h-11 rounded-full bg-stone-100"
-        />
-      ) : (
-        <View className="w-11 h-11 rounded-full bg-brand-100 items-center justify-center">
-          <Text className="text-sm font-semibold text-brand-700">
-            {user.firstName[0]}
-            {user.lastName[0]}
-          </Text>
-        </View>
-      )}
-      <View className="flex-1 ml-3">
-        <Text className="text-sm font-medium text-slate-900">
-          {user.firstName} {user.lastName}
-        </Text>
-        <Text className="text-xs text-slate-500 mt-0.5" numberOfLines={1}>
-          {user.email}
-        </Text>
-      </View>
-      <View
-        className="px-2 py-1 rounded-full"
-        style={{ backgroundColor: `${status.color}15` }}
-      >
-        <Text className="text-xs font-medium" style={{ color: status.color }}>
-          {status.label}
-        </Text>
-      </View>
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color={colors.text.muted}
-        style={{ marginLeft: 6 }}
-      />
-    </Pressable>
   );
 }

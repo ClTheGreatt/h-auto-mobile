@@ -14,16 +14,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../../constants/colors";
-import { useImportUsers } from "../../../lib/hooks/use-users";
+import {
+  detectImportTypeMismatch,
+  importTypeMismatchMessage,
+} from "../../../constants/user-import";
+import {
+    useImportUsers,
+    useValidateImportFile,
+    useValidateImportRows,
+    type ParsedImportRow,
+} from "../../../lib/hooks/use-users";
 
 type ImportType = "FACULTY" | "STUDENT_FARMER";
-type Phase = "idle" | "preview" | "committing" | "done";
-
-type PreviewRow = {
-  rowNumber: number;
-  raw: Record<string, string>;
-  errors: string[];
-};
+type Phase = "idle" | "validating" | "preview" | "committing" | "done";
 
 type ImportResult = {
   success: string[];
@@ -31,6 +34,12 @@ type ImportResult = {
   totalProcessed: number;
 };
 
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+// Full column set the server accepts (required + optional), in the same
+// order as the web template. academicYear is optional for students — if
+// left blank the server derives it from the idNumber prefix.
 const COLUMNS: Record<ImportType, string[]> = {
   FACULTY: [
     "firstName",
@@ -50,6 +59,7 @@ const COLUMNS: Record<ImportType, string[]> = {
     "email",
     "phoneNumber",
     "idNumber",
+    "academicYear",
     "course",
     "yearLevel",
     "section",
@@ -57,38 +67,35 @@ const COLUMNS: Record<ImportType, string[]> = {
   ],
 };
 
-// Mirrors the web import rules; the server re-validates as the source of truth.
-function validateRow(raw: Record<string, string>): string[] {
-  const errors: string[] = [];
-  const firstName = (raw.firstName || "").trim();
-  const lastName = (raw.lastName || "").trim();
-  const email = (raw.email || "").trim();
-  const password = raw.password || "";
-
-  if (!firstName) errors.push("First name is required");
-  if (!lastName) errors.push("Last name is required");
-  if (!email) {
-    errors.push("Email is required");
-  } else if (!email.toLowerCase().endsWith("@bpsu.edu.ph")) {
-    errors.push("Email must use @bpsu.edu.ph");
-  }
-  if (password.length < 6)
-    errors.push("Password must be at least 6 characters");
-  return errors;
-}
+// The real required-field/format rules live server-side (the validate
+// endpoints run the exact same schemas as the commit endpoint) — this is
+// just guidance copy, not enforcement.
+const REQUIRED_CAPTION: Record<ImportType, string> = {
+  FACULTY:
+    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (123456-1234), department, position, password (8+ chars, upper + lower case, a number, and a symbol). middleName and phoneNumber (+639XXXXXXXXX) are optional.",
+  STUDENT_FARMER:
+    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (12-34567), course, section (e.g. BSA-1A), password (8+ chars, upper + lower case, a number, and a symbol). middleName, phoneNumber (+639XXXXXXXXX), yearLevel, and academicYear are optional.",
+};
 
 export default function ImportUsers() {
   const router = useRouter();
   const importUsers = useImportUsers();
+  const validateRows = useValidateImportRows();
+  const validateFile = useValidateImportFile();
 
   const [type, setType] = useState<ImportType>("FACULTY");
   const [phase, setPhase] = useState<Phase>("idle");
   const [fileName, setFileName] = useState("");
-  const [rows, setRows] = useState<PreviewRow[]>([]);
+  const [rows, setRows] = useState<ParsedImportRow[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const validCount = rows.filter((r) => r.errors.length === 0).length;
   const invalidCount = rows.length - validCount;
+
+  function handleValidateError(err: any) {
+    setPhase("idle");
+    Alert.alert("Could not check file", err?.message ?? "Try again");
+  }
 
   async function handlePickFile() {
     try {
@@ -97,6 +104,7 @@ export default function ImportUsers() {
           "text/csv",
           "text/comma-separated-values",
           "application/csv",
+          XLSX_MIME,
           "*/*",
         ],
         copyToCacheDirectory: true,
@@ -104,8 +112,32 @@ export default function ImportUsers() {
       if (res.canceled || !res.assets?.[0]) return;
 
       const asset = res.assets[0];
-      if (!asset.name.toLowerCase().endsWith(".csv")) {
-        Alert.alert("Wrong file type", "Please pick a .csv file.");
+      const lowerName = asset.name.toLowerCase();
+      const isCsv = lowerName.endsWith(".csv");
+      const isXlsx = lowerName.endsWith(".xlsx");
+
+      if (!isCsv && !isXlsx) {
+        Alert.alert("Wrong file type", "Please pick a .csv or .xlsx file.");
+        return;
+      }
+
+      setFileName(asset.name);
+
+      if (isXlsx) {
+        // exceljs is server-only, so an .xlsx upload is always validated
+        // via a round-trip — the same parseExcelImportFile logic (marker
+        // check included) the web .xlsx upload uses.
+        setPhase("validating");
+        validateFile.mutate(
+          { type, uri: asset.uri, name: asset.name },
+          {
+            onSuccess: (res) => {
+              setRows(res.rows);
+              setPhase("preview");
+            },
+            onError: handleValidateError,
+          },
+        );
         return;
       }
 
@@ -113,7 +145,10 @@ export default function ImportUsers() {
       const parsed = Papa.parse<Record<string, string>>(text, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (h) => h.trim(),
+        // Strip the "required field" asterisk the template header carries
+        // (e.g. "idNumber *") so a CSV export of the template still
+        // matches the schema's plain field names.
+        transformHeader: (h) => h.trim().replace(/\s*\*$/, ""),
       });
 
       if (parsed.errors.length > 0) {
@@ -121,34 +156,49 @@ export default function ImportUsers() {
         return;
       }
 
-      // Flag duplicate emails within the same file
-      const emailCounts = new Map<string, number>();
-      for (const r of parsed.data) {
-        const e = (r.email || "").trim().toLowerCase();
-        if (e) emailCounts.set(e, (emailCounts.get(e) ?? 0) + 1);
-      }
-
-      const preview: PreviewRow[] = parsed.data.map((raw, idx) => {
-        const trimmed: Record<string, string> = {};
-        for (const [k, v] of Object.entries(raw)) {
-          trimmed[k] = typeof v === "string" ? v.trim() : String(v ?? "");
-        }
-        const errors = validateRow(trimmed);
-        const e = (trimmed.email || "").toLowerCase();
-        if (e && (emailCounts.get(e) ?? 0) > 1) {
-          errors.push("Duplicate email within this file");
-        }
-        return { rowNumber: idx + 2, raw: trimmed, errors };
-      });
-
-      if (preview.length === 0) {
+      if (parsed.data.length === 0) {
         Alert.alert("Empty file", "No rows found in this CSV.");
         return;
       }
 
-      setFileName(asset.name);
-      setRows(preview);
-      setPhase("preview");
+      // Reject a wrong-template upload up front, as a single clear
+      // message — never as per-row noise about columns the file
+      // legitimately lacks. CSV has no hidden marker sheet to check (lost
+      // on export), so header shape is the only signal available here —
+      // same as the web CSV path.
+      const headers = parsed.meta.fields ?? [];
+      const detectedType = detectImportTypeMismatch(headers, type);
+      if (detectedType) {
+        Alert.alert(
+          "Wrong import type",
+          importTypeMismatchMessage(type, detectedType),
+        );
+        return;
+      }
+
+      const trimmedRows = parsed.data.map((raw) => {
+        const trimmed: Record<string, string> = {};
+        for (const [k, v] of Object.entries(raw)) {
+          trimmed[k] = typeof v === "string" ? v.trim() : String(v ?? "");
+        }
+        return trimmed;
+      });
+
+      setPhase("validating");
+      // Real validation happens server-side (the validate endpoint runs
+      // the exact same schemas the commit endpoint and the web import
+      // use) — this call never persists anything, it only returns
+      // per-row issues for the preview below.
+      validateRows.mutate(
+        { type, rows: trimmedRows },
+        {
+          onSuccess: (res) => {
+            setRows(res.rows);
+            setPhase("preview");
+          },
+          onError: handleValidateError,
+        },
+      );
     } catch (err: any) {
       Alert.alert("Something went wrong", err?.message ?? "Try again");
     }
@@ -237,11 +287,11 @@ export default function ImportUsers() {
 
             <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-5">
               <Text className="text-sm font-semibold text-slate-900 mb-2">
-                Expected CSV columns
+                Expected columns
               </Text>
               <Text className="text-xs text-slate-500 mb-3">
-                Prepare the file on a computer (Excel / Google Sheets) using
-                exactly these headers, then save as .csv:
+                Fill in the columns below in Excel or Google Sheets, then
+                upload as .xlsx or .csv:
               </Text>
               <View className="bg-stone-50 rounded-lg p-3">
                 <Text
@@ -252,8 +302,7 @@ export default function ImportUsers() {
                 </Text>
               </View>
               <Text className="text-xs text-slate-400 mt-3">
-                Required: firstName, lastName, email (@bpsu.edu.ph), password
-                (min 6). The rest are optional.
+                {REQUIRED_CAPTION[type]}
               </Text>
             </View>
 
@@ -267,13 +316,23 @@ export default function ImportUsers() {
                 color={colors.text.muted}
               />
               <Text className="text-sm font-medium text-slate-700 mt-2">
-                Pick a CSV file
+                Pick a file
               </Text>
               <Text className="text-xs text-slate-400 mt-1">
-                You'll see a preview before anything is saved
+                Accepts .xlsx or .csv — you&apos;ll see a preview before
+                anything is saved
               </Text>
             </Pressable>
           </>
+        )}
+
+        {phase === "validating" && (
+          <View className="items-center py-16">
+            <ActivityIndicator color={colors.brand[600]} />
+            <Text className="text-sm text-slate-500 mt-4">
+              Checking your file...
+            </Text>
+          </View>
         )}
 
         {phase === "preview" && (
@@ -361,7 +420,7 @@ export default function ImportUsers() {
                 />
                 <Text className="flex-1 text-xs text-amber-800 ml-2">
                   {invalidCount} row(s) have errors and will be skipped. Fix the
-                  CSV and re-pick, or import only the {validCount} valid row(s).
+                  file and re-pick, or import only the {validCount} valid row(s).
                 </Text>
               </View>
             )}

@@ -1,7 +1,7 @@
 // types/index.ts
 export type UserRole = "SUPER_ADMIN" | "ADMIN" | "FACULTY" | "STUDENT_FARMER";
 
-export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+export type UserStatus = "ACTIVE" | "INACTIVE";
 
 export type User = {
   id: string;
@@ -224,14 +224,18 @@ export type UserListItem = {
   profileImage: string | null;
   lastLoginAt: string | null;
   createdAt: string;
+  academicYear: string | null;
+  graduatedAt: string | null;
+  // Student-only fields (null for every other role) — needed at the list
+  // level for the Course > Year > Section grouping on the Users screen.
+  course: string | null;
+  yearLevel: string | null;
+  section: string | null;
 };
 
 export type UserDetail = UserListItem & {
   middleName: string | null;
   phoneNumber: string | null;
-  course: string | null;
-  yearLevel: string | null;
-  section: string | null;
   position: string | null;
   updatedAt: string;
 };

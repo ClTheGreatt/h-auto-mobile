@@ -15,6 +15,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../../constants/colors";
+import {
+  DEPARTMENTS,
+  FACULTY_ID_REGEX,
+  FACULTY_POSITIONS,
+  isValidStudentIdPrefix,
+  SECTION_REGEX,
+  STUDENT_ID_REGEX,
+  studentIdPrefixRange,
+} from "../../../constants/user-import";
 import { getUser } from "../../../lib/auth";
 import { useCreateUser } from "../../../lib/hooks/use-users";
 import type { User } from "../../../types";
@@ -22,11 +31,11 @@ import type { User } from "../../../types";
 type RoleOption = { value: string; label: string; description: string };
 type StatusOption = { value: string; label: string };
 type FormErrors = Record<string, string | undefined>;
+type PickerKind = "yearLevel" | "department" | "position" | "course" | null;
 
 const STATUS_OPTIONS: StatusOption[] = [
   { value: "ACTIVE", label: "Active" },
   { value: "INACTIVE", label: "Inactive" },
-  { value: "SUSPENDED", label: "Suspended" },
 ];
 
 const YEAR_LEVELS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
@@ -65,7 +74,7 @@ export default function AddUser() {
   const [section, setSection] = useState("");
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [yearPickerOpen, setYearPickerOpen] = useState(false);
+  const [activePicker, setActivePicker] = useState<PickerKind>(null);
 
   useEffect(() => {
     getUser().then(setCurrentUser);
@@ -88,6 +97,12 @@ export default function AddUser() {
     };
   }
 
+  // Server-side re-validation is unconditional regardless of this form:
+  // POST /api/mobile/me/users runs createStudentSchema/createFacultySchema
+  // (src/lib/validations/user.ts on the web side) for every request,
+  // enum/regex-checked, no matter what this client sends. Everything below
+  // is purely a UX improvement — catching mistakes before submit instead
+  // of after a 400 comes back.
   function validateForm(): FormErrors {
     const e: FormErrors = {};
     const normalizedEmail = email.trim().toLowerCase();
@@ -114,7 +129,16 @@ export default function AddUser() {
     }
 
     if (isStudent) {
-      if (!idNumber.trim()) e.idNumber = "This field is required";
+      const trimmedId = idNumber.trim();
+      if (!trimmedId) {
+        e.idNumber = "This field is required";
+      } else if (!STUDENT_ID_REGEX.test(trimmedId)) {
+        e.idNumber = "ID number must be in format 12-34567, e.g. 23-04567";
+      } else if (!isValidStudentIdPrefix(trimmedId)) {
+        const { min, max } = studentIdPrefixRange();
+        e.idNumber = `ID number prefix must be between ${min} and ${max}`;
+      }
+
       if (!phoneNumber.trim()) {
         e.phoneNumber = "This field is required";
       } else if (!isValidPhone(phoneNumber)) {
@@ -122,9 +146,22 @@ export default function AddUser() {
       }
       if (!course.trim()) e.course = "This field is required";
       if (!yearLevel.trim()) e.yearLevel = "This field is required";
-      if (!section.trim()) e.section = "This field is required";
+
+      const trimmedSection = section.trim();
+      if (!trimmedSection) {
+        e.section = "This field is required";
+      } else if (!SECTION_REGEX.test(trimmedSection)) {
+        e.section =
+          "Section must be in format PREFIX-YN, e.g. BSA-1A, BTVTED-2B, BSABE-3C";
+      }
     } else if (isFaculty) {
-      if (!idNumber.trim()) e.idNumber = "This field is required";
+      const trimmedId = idNumber.trim();
+      if (!trimmedId) {
+        e.idNumber = "This field is required";
+      } else if (!FACULTY_ID_REGEX.test(trimmedId)) {
+        e.idNumber =
+          "Employee ID must be in format 123456-1234, e.g. 202000-0001";
+      }
       if (!department.trim()) e.department = "This field is required";
       if (!position.trim()) e.position = "This field is required";
     }
@@ -285,9 +322,7 @@ export default function AddUser() {
               const selectedBg =
                 opt.value === "ACTIVE"
                   ? "bg-brand-600 border-brand-600"
-                  : opt.value === "SUSPENDED"
-                    ? "bg-red-500 border-red-500"
-                    : "bg-slate-500 border-slate-500";
+                  : "bg-slate-500 border-slate-500";
               return (
                 <Pressable
                   key={opt.value}
@@ -391,7 +426,7 @@ export default function AddUser() {
             }`}
             value={idNumber}
             onChangeText={updateField(setIdNumber, "idNumber")}
-            placeholder={isStudent ? "20-12345" : "EMP-2024-001"}
+            placeholder={isStudent ? "23-04567" : "202000-0001"}
             error={errors.idNumber}
           />
 
@@ -405,66 +440,42 @@ export default function AddUser() {
                 placeholder="09XXXXXXXXX or +639XXXXXXXXX"
                 error={errors.phoneNumber}
               />
-              <Field
+              <PickerField
                 label="Course *"
                 value={course}
-                onChangeText={updateField(setCourse, "course")}
-                placeholder="BS Information Technology"
+                placeholder="Select course"
+                onPress={() => setActivePicker("course")}
                 error={errors.course}
               />
-
-              <View className="mb-3">
-                <Text className="text-xs font-medium text-slate-600 mb-1.5">
-                  Year level *
-                </Text>
-                <Pressable
-                  onPress={() => setYearPickerOpen(true)}
-                  className={`bg-white border rounded-lg px-4 py-3 flex-row items-center justify-between ${
-                    errors.yearLevel ? "border-red-400" : "border-slate-200"
-                  }`}
-                >
-                  <Text
-                    className={`text-base ${
-                      yearLevel ? "text-slate-900" : "text-slate-400"
-                    }`}
-                  >
-                    {yearLevel || "Select year level"}
-                  </Text>
-                  <Ionicons
-                    name="chevron-down"
-                    size={18}
-                    color={colors.text.muted}
-                  />
-                </Pressable>
-                {errors.yearLevel && (
-                  <Text className="text-xs text-red-600 mt-1">
-                    {errors.yearLevel}
-                  </Text>
-                )}
-              </View>
-
+              <PickerField
+                label="Year level *"
+                value={yearLevel}
+                placeholder="Select year level"
+                onPress={() => setActivePicker("yearLevel")}
+                error={errors.yearLevel}
+              />
               <Field
                 label="Section *"
                 value={section}
                 onChangeText={updateField(setSection, "section")}
-                placeholder="BSIT-3A"
+                placeholder="BSA-1A"
                 error={errors.section}
               />
             </>
           ) : (
             <>
-              <Field
+              <PickerField
                 label={`Department${isFaculty ? " *" : ""}`}
                 value={department}
-                onChangeText={updateField(setDepartment, "department")}
-                placeholder="College of Computer Studies"
+                placeholder="Select department"
+                onPress={() => setActivePicker("department")}
                 error={errors.department}
               />
-              <Field
+              <PickerField
                 label={`Position${isFaculty ? " *" : ""}`}
                 value={position}
-                onChangeText={updateField(setPosition, "position")}
-                placeholder="Instructor"
+                placeholder="Select position"
+                onPress={() => setActivePicker("position")}
                 error={errors.position}
               />
             </>
@@ -492,11 +503,37 @@ export default function AddUser() {
         </View>
       </KeyboardAvoidingView>
 
-      <YearLevelPickerModal
-        visible={yearPickerOpen}
-        onClose={() => setYearPickerOpen(false)}
+      <ListPickerModal
+        visible={activePicker === "yearLevel"}
+        onClose={() => setActivePicker(null)}
+        title="Select year level"
+        options={YEAR_LEVELS}
         value={yearLevel}
         onSelect={updateField(setYearLevel, "yearLevel")}
+      />
+      <ListPickerModal
+        visible={activePicker === "department"}
+        onClose={() => setActivePicker(null)}
+        title="Select department"
+        options={DEPARTMENTS}
+        value={department}
+        onSelect={updateField(setDepartment, "department")}
+      />
+      <ListPickerModal
+        visible={activePicker === "position"}
+        onClose={() => setActivePicker(null)}
+        title="Select position"
+        options={FACULTY_POSITIONS}
+        value={position}
+        onSelect={updateField(setPosition, "position")}
+      />
+      <ListPickerModal
+        visible={activePicker === "course"}
+        onClose={() => setActivePicker(null)}
+        title="Select course"
+        options={DEPARTMENTS}
+        value={course}
+        onSelect={updateField(setCourse, "course")}
       />
     </SafeAreaView>
   );
@@ -539,14 +576,55 @@ function Field({
   );
 }
 
-function YearLevelPickerModal({
+function PickerField({
+  label,
+  value,
+  placeholder,
+  onPress,
+  error,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onPress: () => void;
+  error?: string;
+}) {
+  return (
+    <View className="mb-3">
+      <Text className="text-xs font-medium text-slate-600 mb-1.5">{label}</Text>
+      <Pressable
+        onPress={onPress}
+        className={`bg-white border rounded-lg px-4 py-3 flex-row items-center justify-between ${
+          error ? "border-red-400" : "border-slate-200"
+        }`}
+      >
+        <Text
+          className={`text-base flex-1 ${
+            value ? "text-slate-900" : "text-slate-400"
+          }`}
+          numberOfLines={1}
+        >
+          {value || placeholder}
+        </Text>
+        <Ionicons name="chevron-down" size={18} color={colors.text.muted} />
+      </Pressable>
+      {error && <Text className="text-xs text-red-600 mt-1">{error}</Text>}
+    </View>
+  );
+}
+
+function ListPickerModal({
   visible,
   onClose,
+  title,
+  options,
   value,
   onSelect,
 }: {
   visible: boolean;
   onClose: () => void;
+  title: string;
+  options: readonly string[];
   value: string;
   onSelect: (v: string) => void;
 }) {
@@ -574,36 +652,38 @@ function YearLevelPickerModal({
           </View>
 
           <Text className="text-lg font-bold text-slate-900 mb-4">
-            Select year level
+            {title}
           </Text>
 
-          <View style={{ gap: 8 }}>
-            {YEAR_LEVELS.map((lvl) => {
-              const isSel = value === lvl;
-              return (
-                <Pressable
-                  key={lvl}
-                  onPress={() => {
-                    onSelect(lvl);
-                    onClose();
-                  }}
-                  className={`py-3.5 px-4 rounded-xl items-center border ${
-                    isSel
-                      ? "bg-brand-600 border-brand-600"
-                      : "bg-white border-slate-200"
-                  } active:opacity-80`}
-                >
-                  <Text
-                    className={`text-sm font-medium ${
-                      isSel ? "text-white" : "text-slate-700"
-                    }`}
+          <ScrollView style={{ maxHeight: 420 }}>
+            <View style={{ gap: 8 }}>
+              {options.map((opt) => {
+                const isSel = value === opt;
+                return (
+                  <Pressable
+                    key={opt}
+                    onPress={() => {
+                      onSelect(opt);
+                      onClose();
+                    }}
+                    className={`py-3.5 px-4 rounded-xl border ${
+                      isSel
+                        ? "bg-brand-600 border-brand-600"
+                        : "bg-white border-slate-200"
+                    } active:opacity-80`}
                   >
-                    {lvl}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+                    <Text
+                      className={`text-sm font-medium text-center ${
+                        isSel ? "text-white" : "text-slate-700"
+                      }`}
+                    >
+                      {opt}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

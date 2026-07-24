@@ -191,6 +191,22 @@ export default function UserDetailScreen() {
                 value={user.section ?? "Not provided"}
                 divider
               />
+              {user.graduatedAt && (
+                <InfoRow
+                  icon="ribbon-outline"
+                  label="Graduated"
+                  value={formatDate(user.graduatedAt)}
+                  divider
+                />
+              )}
+              {user.graduatedAt && user.academicYear && (
+                <InfoRow
+                  icon="calendar-outline"
+                  label="Academic Year"
+                  value={user.academicYear}
+                  divider
+                />
+              )}
             </View>
           </Section>
         )}

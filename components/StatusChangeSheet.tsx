@@ -20,10 +20,9 @@ type StatusSubject = {
 export const STATUS_META: Record<string, { label: string; color: string }> = {
   ACTIVE: { label: "Active", color: "#16a34a" },
   INACTIVE: { label: "Inactive", color: "#64748b" },
-  SUSPENDED: { label: "Suspended", color: "#dc2626" },
 };
 
-const STATUS_KEYS = ["ACTIVE", "INACTIVE", "SUSPENDED"] as const;
+const STATUS_KEYS = ["ACTIVE", "INACTIVE"] as const;
 
 export function StatusChangeSheet({
   user,
