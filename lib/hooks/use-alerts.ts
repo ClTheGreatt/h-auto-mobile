@@ -13,6 +13,14 @@ export function useAlerts(status: AlertQueryStatus = "open") {
   return useQuery({
     queryKey: ["alerts", status],
     queryFn: () => api<{ alerts: AlertItem[] }>(path),
+    select: (data) => ({
+      ...data,
+      alerts: data.alerts.filter((alert) =>
+        status === "open"
+          ? alert.resolved === false
+          : alert.resolved === true,
+      ),
+    }),
     refetchInterval: 10000, // live — para mag-update ang badge + list
   });
 }
