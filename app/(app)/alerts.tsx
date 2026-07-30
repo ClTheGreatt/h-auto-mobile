@@ -84,7 +84,8 @@ function formatType(type: string) {
 
 export default function Alerts() {
   const router = useRouter();
-  const { data, isLoading, refetch, error } = useAlerts();
+  const openQuery = useAlerts("open");
+  const resolvedQuery = useAlerts("resolved");
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<Tab>("OPEN");
   const [query, setQuery] = useState("");
@@ -93,8 +94,11 @@ export default function Alerts() {
 
   async function handleRefresh() {
     setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+    try {
+      await Promise.allSettled([openQuery.refetch(), resolvedQuery.refetch()]);
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   function changeTab(t: Tab) {
@@ -102,14 +106,23 @@ export default function Alerts() {
     setTypeFilter("ALL"); // types differ between open and resolved
   }
 
-  const allAlerts = useMemo(() => data?.alerts ?? [], [data]);
-  const openCount = allAlerts.filter((a) => !a.resolved).length;
-  const resolvedCount = allAlerts.filter((a) => a.resolved).length;
+  const openAlerts = useMemo(
+    () => openQuery.data?.alerts ?? [],
+    [openQuery.data],
+  );
+  const resolvedAlerts = useMemo(
+    () => resolvedQuery.data?.alerts ?? [],
+    [resolvedQuery.data],
+  );
+  const openCount = openAlerts.length;
+  const resolvedCount = resolvedAlerts.length;
 
   const tabAlerts = useMemo(
-    () => allAlerts.filter((a) => (tab === "OPEN" ? !a.resolved : a.resolved)),
-    [allAlerts, tab],
+    () => (tab === "OPEN" ? openAlerts : resolvedAlerts),
+    [openAlerts, resolvedAlerts, tab],
   );
+  const activeQuery = tab === "OPEN" ? openQuery : resolvedQuery;
+  const { isLoading, error } = activeQuery;
 
   const sevCounts = {
     ALL: tabAlerts.length,
