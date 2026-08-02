@@ -28,7 +28,10 @@ import {
 } from "../../../lib/biometric";
 import { formatMemberSince } from "../../../lib/format-date";
 import { useStats } from "../../../lib/hooks/use-stats";
-import { useUploadAvatar } from "../../../lib/hooks/use-upload-avatar";
+import {
+  useRemoveAvatar,
+  useUploadAvatar,
+} from "../../../lib/hooks/use-upload-avatar";
 import { formatRoleLabel } from "../../../lib/permissions";
 import { unregisterPushToken } from "../../../lib/push";
 import type { User } from "../../../types";
@@ -43,6 +46,7 @@ export default function Profile() {
 
   const { data: statsData, refetch: refetchStats } = useStats();
   const uploadAvatar = useUploadAvatar();
+  const removeAvatar = useRemoveAvatar();
 
   useEffect(() => {
     refreshUser();
@@ -75,15 +79,22 @@ export default function Profile() {
   }
 
   function showAvatarPicker() {
+    const hasAvatar = !!user?.profileImage;
+
     if (Platform.OS === "ios") {
+      const options = hasAvatar
+        ? ["Cancel", "Take Photo", "Choose from Gallery", "Remove Photo"]
+        : ["Cancel", "Take Photo", "Choose from Gallery"];
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ["Cancel", "Take Photo", "Choose from Gallery"],
+          options,
           cancelButtonIndex: 0,
+          ...(hasAvatar ? { destructiveButtonIndex: 3 } : {}),
         },
         (idx) => {
           if (idx === 1) pickFromCamera();
           if (idx === 2) pickFromGallery();
+          if (hasAvatar && idx === 3) confirmRemoveAvatar();
         },
       );
     } else {
@@ -91,8 +102,44 @@ export default function Profile() {
         { text: "Cancel", style: "cancel" },
         { text: "Take Photo", onPress: pickFromCamera },
         { text: "Choose from Gallery", onPress: pickFromGallery },
+        ...(hasAvatar
+          ? [
+              {
+                text: "Remove Photo",
+                style: "destructive" as const,
+                onPress: confirmRemoveAvatar,
+              },
+            ]
+          : []),
       ]);
     }
+  }
+
+  function confirmRemoveAvatar() {
+    Alert.alert(
+      "Remove photo?",
+      "Your profile picture will be removed.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            removeAvatar.mutate(undefined, {
+              onSuccess: async () => {
+                await refreshUser();
+              },
+              onError: (err: any) => {
+                Alert.alert(
+                  "Could not remove photo",
+                  err?.message ?? "Try again",
+                );
+              },
+            });
+          },
+        },
+      ],
+    );
   }
 
   async function pickFromCamera() {
@@ -181,7 +228,7 @@ export default function Profile() {
           <View className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm items-center">
             <Pressable
               onPress={showAvatarPicker}
-              disabled={uploadAvatar.isPending}
+              disabled={uploadAvatar.isPending || removeAvatar.isPending}
               className="relative active:opacity-80"
             >
               {user.profileImage ? (
@@ -207,7 +254,7 @@ export default function Profile() {
                 </LinearGradient>
               )}
               <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 items-center justify-center shadow-sm">
-                {uploadAvatar.isPending ? (
+                {uploadAvatar.isPending || removeAvatar.isPending ? (
                   <ActivityIndicator size="small" color={colors.text.primary} />
                 ) : (
                   <Ionicons name="camera" size={14} color={colors.text.primary} />

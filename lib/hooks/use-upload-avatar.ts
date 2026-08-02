@@ -26,3 +26,19 @@ export function useUploadAvatar() {
     },
   });
 }
+
+export function useRemoveAvatar() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      return api<{ user: User }>("/api/mobile/me/avatar", {
+        method: "DELETE",
+      });
+    },
+    onSuccess: async (data) => {
+      await saveUser(data.user);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
