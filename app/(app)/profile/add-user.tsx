@@ -57,8 +57,6 @@ export default function AddUser() {
   const [firstName, setFirstName] = useState("");
   const [middleName, setMiddleName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
   const [role, setRole] = useState("STUDENT_FARMER");
   const [status, setStatus] = useState("ACTIVE");
   const [idNumber, setIdNumber] = useState("");
@@ -75,6 +73,10 @@ export default function AddUser() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [activePicker, setActivePicker] = useState<PickerKind>(null);
+  const [createdAccount, setCreatedAccount] = useState<{
+    name: string;
+    tempPassword: string;
+  } | null>(null);
 
   useEffect(() => {
     getUser().then(setCurrentUser);
@@ -116,16 +118,6 @@ export default function AddUser() {
       e.email = "Invalid email format";
     } else if (!normalizedEmail.endsWith("@bpsu.edu.ph")) {
       e.email = "Must be a BPSU email (@bpsu.edu.ph)";
-    }
-
-    if (!password) {
-      e.password = "This field is required";
-    } else if (password.length < 8) {
-      e.password = "Password must be at least 8 characters";
-    } else if (!/[a-zA-Z]/.test(password)) {
-      e.password = "Password must contain at least one letter";
-    } else if (!/\d/.test(password)) {
-      e.password = "Password must contain at least one number";
     }
 
     if (isStudent) {
@@ -218,7 +210,6 @@ export default function AddUser() {
         firstName: firstName.trim(),
         middleName: middleName.trim() || undefined,
         lastName: lastName.trim(),
-        password,
         role,
         status,
         idNumber: idNumber.trim() || undefined,
@@ -235,12 +226,19 @@ export default function AddUser() {
             }),
       },
       {
-        onSuccess: () => {
-          Alert.alert(
-            "Account created",
-            `${firstName} ${lastName} can now log in. A welcome email was sent.`,
-            [{ text: "OK", onPress: () => router.back() }],
-          );
+        onSuccess: (result) => {
+          if (result.tempPassword) {
+            setCreatedAccount({
+              name: `${firstName} ${lastName}`,
+              tempPassword: result.tempPassword,
+            });
+          } else {
+            Alert.alert(
+              "Account created",
+              `${firstName} ${lastName} can now log in, but the temporary password could not be displayed. Check the welcome email sent to ${normalizedEmail} for the password.`,
+              [{ text: "OK", onPress: () => router.back() }],
+            );
+          }
         },
         onError: (err: any) => {
           const fieldErrors = err?.data?.fieldErrors;
@@ -377,45 +375,6 @@ export default function AddUser() {
             error={errors.lastName}
           />
 
-          {/* Password */}
-          <Text className="text-xs font-medium text-slate-600 mb-1.5">
-            Password *
-          </Text>
-          <View className="relative mb-1">
-            <TextInput
-              className={`bg-white border rounded-lg px-4 py-3 pr-12 text-base text-slate-900 ${
-                errors.password ? "border-red-400" : "border-slate-200"
-              }`}
-              value={password}
-              onChangeText={updateField(setPassword, "password")}
-              secureTextEntry={!showPwd}
-              autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
-              placeholder="At least 8 characters"
-              placeholderTextColor="#94a3b8"
-            />
-            <Pressable
-              onPress={() => setShowPwd(!showPwd)}
-              className="absolute right-3 top-0 bottom-0 justify-center"
-            >
-              <Ionicons
-                name={showPwd ? "eye-off" : "eye"}
-                size={20}
-                color={colors.text.muted}
-              />
-            </Pressable>
-          </View>
-          {errors.password ? (
-            <Text className="text-xs text-red-600 mt-1 mb-5">
-              {errors.password}
-            </Text>
-          ) : (
-            <Text className="text-xs text-slate-400 mb-5">
-              At least 8 characters with a letter and a number
-            </Text>
-          )}
-
           {/* Details */}
           <Text className="text-xs font-semibold text-slate-500 uppercase mb-2">
             Details
@@ -534,6 +493,16 @@ export default function AddUser() {
         options={DEPARTMENTS}
         value={course}
         onSelect={updateField(setCourse, "course")}
+      />
+
+      <TempPasswordModal
+        visible={!!createdAccount}
+        name={createdAccount?.name ?? ""}
+        tempPassword={createdAccount?.tempPassword ?? ""}
+        onDone={() => {
+          setCreatedAccount(null);
+          router.back();
+        }}
       />
     </SafeAreaView>
   );
@@ -686,6 +655,88 @@ function ListPickerModal({
           </ScrollView>
         </Pressable>
       </Pressable>
+    </Modal>
+  );
+}
+
+// No dismiss-on-backdrop-tap and no-op onRequestClose (blocks Android back
+// button) so the temp password can't be lost by an accidental tap/back —
+// the only way out is the explicit Done button.
+function TempPasswordModal({
+  visible,
+  name,
+  tempPassword,
+  onDone,
+}: {
+  visible: boolean;
+  name: string;
+  tempPassword: string;
+  onDone: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => {}}
+    >
+      <View className="flex-1 bg-black/40 justify-end">
+        <View className="bg-white rounded-t-3xl px-6 pt-4 pb-9">
+          <View className="items-center mb-3">
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: "#e2e8f0",
+              }}
+            />
+          </View>
+
+          <View className="items-center mb-4">
+            <View className="w-14 h-14 rounded-full bg-brand-100 items-center justify-center mb-3">
+              <Ionicons name="key" size={26} color={colors.brand[600]} />
+            </View>
+            <Text className="text-lg font-bold text-slate-900 text-center">
+              Account created
+            </Text>
+            <Text className="text-sm text-slate-500 text-center mt-1">
+              {name} can now log in with the temporary password below.
+            </Text>
+          </View>
+
+          <View className="bg-stone-50 border border-slate-200 rounded-xl py-4 px-4 mb-4">
+            <Text
+              selectable
+              className="text-xl text-center text-slate-900 tracking-wider"
+              style={{ fontFamily: "monospace" }}
+            >
+              {tempPassword}
+            </Text>
+          </View>
+
+          <View className="flex-row items-start bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
+            <Ionicons
+              name="alert-circle"
+              size={16}
+              color="#b45309"
+              style={{ marginTop: 1 }}
+            />
+            <Text className="text-xs text-amber-800 ml-2 flex-1">
+              This password is shown only once and cannot be recovered
+              afterward. It has also been sent to the new account by email.
+              Long-press the password above to copy it.
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={onDone}
+            className="bg-brand-600 rounded-xl py-3.5 items-center active:opacity-90"
+          >
+            <Text className="text-white font-semibold text-base">Done</Text>
+          </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }

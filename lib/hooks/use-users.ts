@@ -59,7 +59,11 @@ type CreateUserInput = {
   middleName?: string;
   lastName: string;
   role: string;
-  password: string;
+  // Optional: when omitted, the server generates one and returns it
+  // once as tempPassword. Still accepted if a caller wants to set one
+  // explicitly (unused by this app's own Add User form now, but the
+  // server continues to support it).
+  password?: string;
   status?: string;
   idNumber?: string;
   phoneNumber?: string;
@@ -74,10 +78,13 @@ export function useCreateUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateUserInput) =>
-      api<{ user: UserListItem }>("/api/mobile/me/users", {
-        method: "POST",
-        body: input,
-      }),
+      api<{ user: UserListItem; tempPassword?: string }>(
+        "/api/mobile/me/users",
+        {
+          method: "POST",
+          body: input,
+        },
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     },
