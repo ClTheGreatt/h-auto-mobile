@@ -144,6 +144,7 @@ export function PlotAssignmentsCard({
       <StudentPickerSheet
         visible={pickerOpen}
         onClose={() => setPickerOpen(false)}
+        plotId={plotId}
         excludeStudentIds={assignments.map((a) => a.studentId)}
         onSelect={handleSelectStudent}
       />

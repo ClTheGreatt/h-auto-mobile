@@ -35,6 +35,24 @@ export function useStudents() {
   });
 }
 
+// Candidates for THIS plot's assign-student picker, scoped server-side to
+// the viewer's actual authority: unrestricted for Admin/Super Admin,
+// limited to the Faculty caller's advised sections otherwise. Already-
+// assigned students are NOT excluded server-side — the caller still
+// filters via excludeStudentIds, same as before. Replaces useStudents()
+// for the picker; that hook is unrelated (role/status-filtered, not
+// plot/advisory-scoped) and has no other callers to preserve.
+export function useAssignableStudents(plotId: string) {
+  return useQuery({
+    queryKey: ["plots", plotId, "assignable-students"],
+    queryFn: () =>
+      api<{ students: StudentListItem[] }>(
+        `/api/mobile/me/plots/${plotId}/assignable-students`,
+      ),
+    enabled: !!plotId,
+  });
+}
+
 type CreateUserInput = {
   email: string;
   firstName: string;

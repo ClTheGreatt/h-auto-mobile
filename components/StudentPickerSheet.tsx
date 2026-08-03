@@ -11,24 +11,26 @@ import {
   View,
 } from "react-native";
 import { colors } from "../constants/colors";
-import { useStudents } from "../lib/hooks/use-users";
+import { useAssignableStudents } from "../lib/hooks/use-users";
 import type { StudentListItem } from "../types";
 
 export function StudentPickerSheet({
   visible,
   onClose,
+  plotId,
   excludeStudentIds,
   onSelect,
 }: {
   visible: boolean;
   onClose: () => void;
+  plotId: string;
   excludeStudentIds: string[];
   onSelect: (student: StudentListItem) => void;
 }) {
   const [query, setQuery] = useState("");
-  const { data, isLoading } = useStudents();
+  const { data, isLoading, error, refetch } = useAssignableStudents(plotId);
 
-  const students = data?.users ?? [];
+  const students = data?.students ?? [];
   const q = query.trim().toLowerCase();
   const filtered = students.filter((s) => {
     if (excludeStudentIds.includes(s.id)) return false;
@@ -100,9 +102,33 @@ export function StudentPickerSheet({
             <View className="items-center py-8">
               <ActivityIndicator color={colors.brand[600]} />
             </View>
+          ) : error ? (
+            <View className="items-center py-8 px-4">
+              <Ionicons
+                name="alert-circle"
+                size={28}
+                color={colors.status.error}
+              />
+              <Text className="text-sm text-slate-700 font-medium mt-2 text-center">
+                Could not load students
+              </Text>
+              <Text className="text-xs text-slate-500 mt-1 text-center">
+                {(error as any)?.message ?? "Try again"}
+              </Text>
+              <Pressable
+                onPress={() => refetch()}
+                className="mt-3 px-4 py-2 bg-brand-600 rounded-lg"
+              >
+                <Text className="text-white text-sm font-medium">Retry</Text>
+              </Pressable>
+            </View>
           ) : filtered.length === 0 ? (
             <View className="items-center py-8">
-              <Text className="text-sm text-slate-400">No students found</Text>
+              <Text className="text-sm text-slate-400 text-center px-4">
+                {students.length === 0
+                  ? "No students in your advised sections"
+                  : "No students found"}
+              </Text>
             </View>
           ) : (
             <ScrollView
