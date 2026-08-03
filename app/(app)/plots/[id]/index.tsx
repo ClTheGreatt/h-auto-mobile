@@ -571,7 +571,7 @@ function MetricTile({
       <Ionicons name={icon} size={18} color={colors.brand[600]} />
       <View>
         <Text className="text-xs text-slate-500">{label}</Text>
-        <Text className="text-sm font-bold text-slate-900">{value}</Text>
+        <Text className="text-base font-bold text-slate-900">{value}</Text>
       </View>
     </View>
   );
