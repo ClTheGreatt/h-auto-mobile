@@ -18,6 +18,7 @@ import { colors } from "../../../../constants/colors";
 import { getUser } from "../../../../lib/auth";
 import { useDeleteObservation } from "../../../../lib/hooks/use-delete-observation";
 import { usePlot } from "../../../../lib/hooks/use-plot";
+import { usePlotAssignments } from "../../../../lib/hooks/use-plot-assignments";
 import { canDeleteLog } from "../../../../lib/permissions";
 import type { User } from "../../../../types";
 
@@ -67,6 +68,10 @@ export default function PlotDetail() {
   }>();
   const router = useRouter();
   const { data, isLoading, error, refetch } = usePlot(id);
+  // Shares the same cache entry PlotAssignmentsCard already fetches below —
+  // no extra network request, just also reading the count up here for the
+  // coverage line.
+  const { data: assignmentsData } = usePlotAssignments(id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const [observationsY, setObservationsY] = useState<number | null>(null);
@@ -138,6 +143,56 @@ export default function PlotDetail() {
       ? `Day ${Math.min(daysSincePlanting + 1, plot.crop.daysToHarvest)} of ${plot.crop.daysToHarvest}`
       : null;
 
+  // Coverage gaps — mirrors web's dashboard "needs attention" conditions
+  // (src/app/dashboard/page.tsx: MISSING_DEVICE / NEVER_REPORTED / stale
+  // data / MISSING_STAGE), but expressed in elapsed days rather than web's
+  // minute-level device-freshness thresholds: this line is about long-run
+  // monitoring coverage (has anyone looked at this plot in days?), not
+  // short-term connectivity — LiveDot already covers that. A missing
+  // device/reading/stage is only a gap once the plot has an active crop
+  // (OPERATIONAL); PREPARING legitimately has neither yet. "No students
+  // assigned" applies to both — mirrors PlotAssignmentsCard's own data, no
+  // extra request. Harvested/fallow/archived plots get no coverage line at
+  // all, same as they get no "Log observation" CTA.
+  const isPreparing = plot.status === "PREPARING";
+  const isOperationalPlot =
+    plot.status === "PLANTED" ||
+    plot.status === "GROWING" ||
+    plot.status === "READY_FOR_HARVEST";
+  const assignmentCount = assignmentsData?.assignments.length;
+
+  const coverageGaps: string[] = [];
+  if (isPreparing) {
+    if (assignmentCount === 0) coverageGaps.push("No students assigned");
+  } else if (isOperationalPlot) {
+    if (!plot.device) {
+      coverageGaps.push("No device");
+    } else if (!plot.latestReading) {
+      coverageGaps.push("No sensor data yet");
+    } else {
+      const days = Math.floor(
+        (Date.now() - new Date(plot.latestReading.recordedAt).getTime()) /
+          86400000,
+      );
+      if (days >= 1) coverageGaps.push(`No sensor data for ${days}d`);
+    }
+
+    if (plot.observations.length === 0) {
+      coverageGaps.push("No observations yet");
+    } else {
+      const days = Math.floor(
+        (Date.now() - new Date(plot.observations[0].createdAt).getTime()) /
+          86400000,
+      );
+      if (days >= 1) coverageGaps.push(`No observations for ${days}d`);
+    }
+
+    if (!plot.currentStage) coverageGaps.push("No growth stage set");
+    if (assignmentCount === 0) coverageGaps.push("No students assigned");
+  }
+  const coverageLine =
+    coverageGaps.length > 0 ? coverageGaps.join(" · ") : null;
+
   function handleDeleteObservation(logId: string) {
     Alert.alert(
       "Delete observation?",
@@ -206,6 +261,11 @@ export default function PlotDetail() {
                 <DetailItem label="Stage" value={plot.currentStage.name} />
               )}
             </View>
+            {coverageLine && (
+              <Text className="text-xs text-slate-400 mt-2">
+                {coverageLine}
+              </Text>
+            )}
           </View>
         )}
 
