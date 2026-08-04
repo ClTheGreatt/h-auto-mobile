@@ -90,7 +90,7 @@ export type Observation = {
   stage: {
     name: string;
   } | null;
-  images: { imageUrl: string }[]; // ← ADD THIS
+  images: { imageUrl: string }[];
 };
 
 export type PlotDetail = {

@@ -102,12 +102,15 @@ export default function Home() {
               {user ? user.firstName : "..."}
             </Text>
           </View>
-          <View className="w-12 h-12 rounded-full bg-brand-100 items-center justify-center">
+          <Pressable
+            onPress={() => router.push("/(app)/profile")}
+            className="w-12 h-12 rounded-full bg-brand-100 items-center justify-center active:opacity-70"
+          >
             <Text className="text-xl font-semibold text-brand-700">
               {user?.firstName?.[0]}
               {user?.lastName?.[0]}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Stats grid */}
@@ -135,16 +138,18 @@ export default function Home() {
               onPress={() => router.push("/(app)/alerts")}
             />
             <StatCard
-              label="Observations"
+              label="My Observations"
               value={stats?.myObservations ?? 0}
               icon="document-text"
               color={colors.brand[600]}
+              onPress={() => router.push("/(app)/analytics")}
             />
             <StatCard
               label="Today"
               value={stats?.todaysObservations ?? 0}
               icon="today"
               color={colors.brand[600]}
+              onPress={() => router.push("/(app)/analytics")}
             />
           </View>
         </View>

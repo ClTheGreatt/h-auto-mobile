@@ -123,6 +123,21 @@ export default function PlotDetail() {
   const isArchived = plot.status === "ARCHIVED";
   const loggingPaused = isHarvested || isArchived;
 
+  // Mirrors web's dashboard "Day X of Y" progress format (dashboard/page.tsx)
+  // instead of showing crop.daysToHarvest alone, which is a fixed cycle
+  // length, not a countdown — it never changes as the plot actually grows.
+  // Falls back to labeling it as a cycle length when there's no planting
+  // date yet to compute progress from (e.g. a plot still in PREPARING).
+  const daysSincePlanting = plot.plantingDate
+    ? Math.floor(
+        (Date.now() - new Date(plot.plantingDate).getTime()) / 86400000,
+      )
+    : null;
+  const cropDayLabel =
+    daysSincePlanting != null && daysSincePlanting >= 0 && plot.crop
+      ? `Day ${Math.min(daysSincePlanting + 1, plot.crop.daysToHarvest)} of ${plot.crop.daysToHarvest}`
+      : null;
+
   function handleDeleteObservation(logId: string) {
     Alert.alert(
       "Delete observation?",
@@ -184,8 +199,8 @@ export default function PlotDetail() {
             )}
             <View className="flex-row gap-4 mt-3 pt-3 border-t border-slate-100">
               <DetailItem
-                label="Days to harvest"
-                value={`${plot.crop.daysToHarvest} days`}
+                label={cropDayLabel ? "Progress" : "Cycle length"}
+                value={cropDayLabel ?? `${plot.crop.daysToHarvest} days`}
               />
               {plot.currentStage && (
                 <DetailItem label="Stage" value={plot.currentStage.name} />
@@ -222,7 +237,12 @@ export default function PlotDetail() {
               Latest reading
             </Text>
             <View className="flex-row items-center gap-2">
-              {plot.latestReading && <LiveDot online={plot.deviceOnline} />}
+              {plot.latestReading && (
+                <LiveDot
+                  online={plot.deviceOnline}
+                  onPressOffline={() => router.push("/(app)/profile/help")}
+                />
+              )}
               {plot.latestReading && (
                 <Text className="text-xs text-slate-400">
                   {formatRelativeTime(plot.latestReading.recordedAt)}
@@ -496,7 +516,7 @@ export default function PlotDetail() {
         )}
       </View>
 
-      {/* Photo preview modal ← ADD THIS WHOLE BLOCK */}
+      {/* Photo preview modal */}
       <Modal
         visible={!!previewImage}
         transparent
@@ -576,7 +596,13 @@ function MetricTile({
     </View>
   );
 }
-function LiveDot({ online }: { online: boolean }) {
+function LiveDot({
+  online,
+  onPressOffline,
+}: {
+  online: boolean;
+  onPressOffline?: () => void;
+}) {
   const pulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -601,7 +627,10 @@ function LiveDot({ online }: { online: boolean }) {
 
   if (!online) {
     return (
-      <View className="flex-row items-center gap-1.5">
+      <Pressable
+        onPress={onPressOffline}
+        className="flex-row items-center gap-1.5 active:opacity-70"
+      >
         <View
           style={{
             width: 8,
@@ -611,7 +640,12 @@ function LiveDot({ online }: { online: boolean }) {
           }}
         />
         <Text className="text-xs font-medium text-slate-400">Offline</Text>
-      </View>
+        <Ionicons
+          name="help-circle-outline"
+          size={13}
+          color={colors.text.muted}
+        />
+      </Pressable>
     );
   }
 

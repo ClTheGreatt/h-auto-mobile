@@ -45,8 +45,7 @@ export function useCreateObservation() {
         formData.append("longitude", String(input.longitude));
       }
       if (input.locationName) {
-        // ← ADD
-        formData.append("locationName", input.locationName); // ← ADD
+        formData.append("locationName", input.locationName);
       }
 
       return api<{ success: boolean; observation: { id: string } }>(

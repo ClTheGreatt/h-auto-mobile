@@ -87,7 +87,7 @@ export default function Login() {
       await saveToken(response.token);
       await saveUser(response.user);
       await promptBiometricSetup();
-      router.replace("/(app)"); // ← add this back here
+      router.replace("/(app)");
     } catch (err: any) {
       let message = "Login failed. Please try again.";
       if (err.message?.toLowerCase().includes("network")) {

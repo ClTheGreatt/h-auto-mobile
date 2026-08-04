@@ -336,36 +336,38 @@ export default function Profile() {
           </View>
         )}
         {/* Account details (read-only) */}
-        <View className="px-6 mt-6">
-          <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
-            Details
-          </Text>
-          <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            {user.idNumber && (
-              <InfoRow
-                icon="card-outline"
-                label="ID Number"
-                value={user.idNumber}
-              />
-            )}
-            {user.phoneNumber && (
-              <InfoRow
-                icon="call-outline"
-                label="Phone"
-                value={user.phoneNumber}
-                divider={!!user.idNumber}
-              />
-            )}
-            {user.department && (
-              <InfoRow
-                icon="business-outline"
-                label="Department"
-                value={user.department}
-                divider
-              />
-            )}
+        {(user.idNumber || user.phoneNumber || user.department) && (
+          <View className="px-6 mt-6">
+            <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
+              Details
+            </Text>
+            <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              {user.idNumber && (
+                <InfoRow
+                  icon="card-outline"
+                  label="ID Number"
+                  value={user.idNumber}
+                />
+              )}
+              {user.phoneNumber && (
+                <InfoRow
+                  icon="call-outline"
+                  label="Phone"
+                  value={user.phoneNumber}
+                  divider={!!user.idNumber}
+                />
+              )}
+              {user.department && (
+                <InfoRow
+                  icon="business-outline"
+                  label="Department"
+                  value={user.department}
+                  divider
+                />
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* Settings */}
         <View className="px-6 mt-6">

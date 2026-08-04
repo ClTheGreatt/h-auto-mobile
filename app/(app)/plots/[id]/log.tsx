@@ -146,7 +146,7 @@ export default function LogObservation() {
         notes: notes.trim() || undefined,
         latitude: coords?.lat ?? null,
         longitude: coords?.lng ?? null,
-        locationName: address ?? undefined, // ← ADD
+        locationName: address ?? undefined,
       },
       {
         onSuccess: () => {

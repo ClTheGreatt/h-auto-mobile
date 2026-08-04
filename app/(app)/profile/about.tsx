@@ -22,7 +22,7 @@ type TechCategory = {
 };
 
 const ABOUT_PARAGRAPHS = [
-  "H-Auto is a comprehensive web-based monitoring system designed for educational gardens. It combines IoT sensor technology with a modern web platform to enable real-time monitoring, data analytics, and automated alerting for vegetable cultivation.",
+  "H-Auto is a comprehensive IoT-based monitoring system designed for educational gardens. It combines IoT sensor technology with a web and mobile platform to enable real-time monitoring, data analytics, and automated alerting for vegetable cultivation.",
   "The system was developed as a capstone project to address the challenge of effective garden management in academic settings, where multiple students share responsibility for plot care under faculty supervision. By providing continuous environmental monitoring and instant alert notifications, H-Auto helps prevent crop loss and improves learning outcomes through data-driven cultivation.",
 ];
 
