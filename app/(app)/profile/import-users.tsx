@@ -50,7 +50,6 @@ const COLUMNS: Record<ImportType, string[]> = {
     "idNumber",
     "department",
     "position",
-    "password",
   ],
   STUDENT_FARMER: [
     "firstName",
@@ -63,7 +62,6 @@ const COLUMNS: Record<ImportType, string[]> = {
     "course",
     "yearLevel",
     "section",
-    "password",
   ],
 };
 
@@ -72,10 +70,15 @@ const COLUMNS: Record<ImportType, string[]> = {
 // just guidance copy, not enforcement.
 const REQUIRED_CAPTION: Record<ImportType, string> = {
   FACULTY:
-    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (123456-1234), department, position, password (8+ chars, upper + lower case, a number, and a symbol). middleName and phoneNumber (+639XXXXXXXXX) are optional.",
+    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (123456-1234), department, position. middleName and phoneNumber (+639XXXXXXXXX) are optional.",
   STUDENT_FARMER:
-    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (12-34567), course, section (e.g. BSA-1A), password (8+ chars, upper + lower case, a number, and a symbol). middleName, phoneNumber (+639XXXXXXXXX), yearLevel, and academicYear are optional.",
+    "Required: firstName, lastName, email (@bpsu.edu.ph), idNumber (12-34567), course, section (e.g. BSA-1A). middleName, phoneNumber (+639XXXXXXXXX), yearLevel, and academicYear are optional.",
 };
+
+// Mirrors web's template-generator.ts wording (duplicated by hand — the two
+// repos share no code, so this can drift if that string changes again).
+const PASSWORD_NOTE =
+  "A temporary password is generated automatically for each account and emailed to the user. Do not include a password column.";
 
 export default function ImportUsers() {
   const router = useRouter();
@@ -303,6 +306,9 @@ export default function ImportUsers() {
               </View>
               <Text className="text-xs text-slate-400 mt-3">
                 {REQUIRED_CAPTION[type]}
+              </Text>
+              <Text className="text-xs text-slate-400 mt-2">
+                {PASSWORD_NOTE}
               </Text>
             </View>
 
