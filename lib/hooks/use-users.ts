@@ -105,8 +105,17 @@ export function useUpdateUserStatus() {
   });
 }
 
-type ImportResult = {
+export type CreatedCredential = {
+  email: string;
+  firstName: string;
+  lastName: string;
+  tempPassword: string;
+};
+
+export type ImportResult = {
   success: string[];
+  // Optional: older server responses may omit this — never assume present.
+  credentials?: CreatedCredential[];
   failed: { email: string; reason: string }[];
   totalProcessed: number;
 };

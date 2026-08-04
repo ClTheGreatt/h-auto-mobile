@@ -1,9 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { useRouter } from "expo-router";
+import { useNavigation, useRouter } from "expo-router";
 import Papa from "papaparse";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -22,17 +22,12 @@ import {
     useImportUsers,
     useValidateImportFile,
     useValidateImportRows,
+    type ImportResult,
     type ParsedImportRow,
 } from "../../../lib/hooks/use-users";
 
 type ImportType = "FACULTY" | "STUDENT_FARMER";
 type Phase = "idle" | "validating" | "preview" | "committing" | "done";
-
-type ImportResult = {
-  success: string[];
-  failed: { email: string; reason: string }[];
-  totalProcessed: number;
-};
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -82,6 +77,7 @@ const PASSWORD_NOTE =
 
 export default function ImportUsers() {
   const router = useRouter();
+  const navigation = useNavigation();
   const importUsers = useImportUsers();
   const validateRows = useValidateImportRows();
   const validateFile = useValidateImportFile();
@@ -91,6 +87,18 @@ export default function ImportUsers() {
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<ParsedImportRow[]>([]);
   const [result, setResult] = useState<ImportResult | null>(null);
+
+  // The "done" screen is the only place the generated passwords are ever
+  // shown — block hardware back / iOS swipe-back from losing it. Only the
+  // explicit "View users" button (which flips this ref first) is allowed
+  // to leave; "Import another" never navigates, so it needs no exemption.
+  const leavingRef = useRef(false);
+  useEffect(() => {
+    return navigation.addListener("beforeRemove", (e: any) => {
+      if (phase !== "done" || leavingRef.current) return;
+      e.preventDefault();
+    });
+  }, [navigation, phase]);
 
   const validCount = rows.filter((r) => r.errors.length === 0).length;
   const invalidCount = rows.length - validCount;
@@ -242,10 +250,22 @@ export default function ImportUsers() {
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
       <View className="flex-row items-center px-4 py-3 bg-stone-50 border-b border-slate-100">
         <Pressable
-          onPress={() => (phase === "preview" ? reset() : router.back())}
+          onPress={() => {
+            if (phase === "done") return;
+            if (phase === "preview") {
+              reset();
+              return;
+            }
+            router.back();
+          }}
+          disabled={phase === "done"}
           className="w-10 h-10 items-center justify-center rounded-full active:bg-slate-200"
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={phase === "done" ? colors.text.muted : colors.text.primary}
+          />
         </Pressable>
         <Text className="flex-1 text-lg font-semibold text-slate-900 ml-2">
           Import users
@@ -497,6 +517,45 @@ export default function ImportUsers() {
                 ))}
               </View>
             )}
+
+            {result.credentials && result.credentials.length > 0 && (
+              <View className="bg-white border border-slate-200 rounded-2xl p-4 mb-4">
+                <Text className="text-sm font-semibold text-slate-900 mb-1">
+                  Temporary credentials
+                </Text>
+                <Text className="text-xs text-slate-500 mb-3">
+                  Shown only once and also emailed to each new account.
+                  Long-press a password to copy it.
+                </Text>
+                {result.credentials.map((c, i) => (
+                  <View
+                    key={`${c.email}-${i}`}
+                    className={`py-3 ${
+                      i < result.credentials!.length - 1
+                        ? "border-b border-slate-50"
+                        : ""
+                    }`}
+                  >
+                    <Text className="text-sm font-medium text-slate-900">
+                      {c.firstName} {c.lastName}
+                    </Text>
+                    <Text
+                      className="text-xs text-slate-500 mt-0.5"
+                      numberOfLines={1}
+                    >
+                      {c.email}
+                    </Text>
+                    <Text
+                      selectable
+                      className="text-sm text-slate-900 mt-1.5 tracking-wide"
+                      style={{ fontFamily: "monospace" }}
+                    >
+                      {c.tempPassword}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </>
         )}
       </ScrollView>
@@ -544,7 +603,10 @@ export default function ImportUsers() {
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => router.replace("/(app)/profile/users")}
+            onPress={() => {
+              leavingRef.current = true;
+              router.replace("/(app)/profile/users");
+            }}
             className="flex-1 rounded-xl py-3.5 items-center bg-brand-600 active:bg-brand-700"
           >
             <Text className="text-white font-semibold text-base">
