@@ -13,7 +13,10 @@ import Constants from "expo-constants";
  *   - Example: "https://h-auto.vercel.app"
  */
 const DEV_API_URL = "http://192.168.1.54:3000"; // ⚠️ CHANGE THIS
-const PROD_API_URL = "https://h-auto-pearl.vercel.app"; // ⚠️ CHANGE THIS when deployed
+// Production custom domain (Cloudflare DNS), matching the web app's
+// deployed host. A cloud build bakes this in unconditionally whenever
+// __DEV__ === false (any non-development-client EAS profile).
+const PROD_API_URL = "https://h-auto.org";
 
 export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
 
