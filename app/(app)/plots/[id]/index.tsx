@@ -103,20 +103,36 @@ export default function PlotDetail() {
   }
 
   if (error || !data?.plot) {
+    const status = (error as any)?.status;
+    const isForbidden = status === 403;
+
     return (
       <SafeAreaView className="flex-1 bg-stone-50">
         <CustomHeader title="Error" onBack={() => router.back()} />
         <View className="flex-1 items-center justify-center px-6">
           <Ionicons name="alert-circle" size={48} color={colors.status.error} />
-          <Text className="text-base font-medium text-slate-700 mt-4">
-            Failed to load plot
+          <Text className="text-base font-medium text-slate-700 mt-4 text-center">
+            {isForbidden
+              ? "You no longer have access to this plot. It may have been archived or your assignment ended."
+              : "Failed to load plot"}
           </Text>
-          <Pressable
-            onPress={() => refetch()}
-            className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
-          >
-            <Text className="text-white text-sm font-medium">Retry</Text>
-          </Pressable>
+          {isForbidden ? (
+            <Pressable
+              onPress={() => router.replace("/(app)/plots")}
+              className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
+            >
+              <Text className="text-white text-sm font-medium">
+                Back to plots
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => refetch()}
+              className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
+            >
+              <Text className="text-white text-sm font-medium">Retry</Text>
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     );

@@ -65,14 +65,14 @@ export default function UserDetailScreen() {
 
   if (error || !user) {
     const status = (error as any)?.status;
-    const message =
-      status === 404
+    const isExpiredSession = status === 401;
+    const message = isExpiredSession
+      ? "Your session has expired. Please log in again."
+      : status === 404
         ? "This user could not be found."
         : status === 403
           ? "You don't have permission to view this user."
-          : status === 401
-            ? "Your session has expired. Please log in again."
-            : "Failed to load user details.";
+          : "Failed to load user details.";
 
     return (
       <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
@@ -82,12 +82,21 @@ export default function UserDetailScreen() {
           <Text className="text-base font-medium text-slate-700 mt-4 text-center">
             {message}
           </Text>
-          <Pressable
-            onPress={() => refetch()}
-            className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
-          >
-            <Text className="text-white text-sm font-medium">Retry</Text>
-          </Pressable>
+          {isExpiredSession ? (
+            <Pressable
+              onPress={() => router.replace("/(auth)/login")}
+              className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
+            >
+              <Text className="text-white text-sm font-medium">Log In</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => refetch()}
+              className="mt-4 px-4 py-2 bg-brand-600 rounded-lg"
+            >
+              <Text className="text-white text-sm font-medium">Retry</Text>
+            </Pressable>
+          )}
         </View>
       </SafeAreaView>
     );

@@ -31,6 +31,7 @@ const RANGE_CHIPS: [RangeKey, string][] = [
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-US", {
+    timeZone: "Asia/Manila",
     hour: "numeric",
     minute: "2-digit",
   });
@@ -70,10 +71,14 @@ export default function ReadingsHistory() {
     const keys: string[] = [];
     for (const r of readings) {
       const d = new Date(r.recordedAt);
-      const key = d.toDateString();
+      // Grouping key must be Manila-pinned too — toDateString() used the
+      // device's local zone, which can bucket a reading under the wrong
+      // calendar day near midnight if the device's timezone isn't Manila.
+      const key = d.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
       if (!map.has(key)) {
         map.set(key, {
           title: d.toLocaleDateString("en-US", {
+            timeZone: "Asia/Manila",
             weekday: "short",
             month: "short",
             day: "numeric",

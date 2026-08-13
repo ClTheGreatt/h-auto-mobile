@@ -65,7 +65,7 @@ function getGreeting() {
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
-  const { data, isLoading, refetch } = useDashboard();
+  const { data, isLoading, error, refetch } = useDashboard();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
@@ -113,164 +113,185 @@ export default function Home() {
           </Pressable>
         </View>
 
-        {/* Stats grid */}
-        <View className="px-6 mb-6">
-          <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
-            Today&apos;s Overview
-          </Text>
-          <View className="flex-row flex-wrap" style={{ gap: 8 }}>
-            <StatCard
-              label={
-                user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
-                  ? "Total Plots"
-                  : "My Plots"
-              }
-              value={stats?.plots ?? 0}
-              icon="leaf"
-              color={colors.brand[600]}
-              onPress={() => router.push("/(app)/plots")}
-            />
-            <StatCard
-              label="Open Alerts"
-              value={stats?.openAlerts ?? 0}
-              icon="warning"
-              color={stats?.openAlerts ? "#dc2626" : colors.text.muted}
-              onPress={() => router.push("/(app)/alerts")}
-            />
-            <StatCard
-              label="My Observations"
-              value={stats?.myObservations ?? 0}
-              icon="document-text"
-              color={colors.brand[600]}
-              onPress={() => router.push("/(app)/analytics")}
-            />
-            <StatCard
-              label="Today"
-              value={stats?.todaysObservations ?? 0}
-              icon="today"
-              color={colors.brand[600]}
-              onPress={() => router.push("/(app)/analytics")}
-            />
-          </View>
-        </View>
-
-        {/* Urgent Alerts */}
-        {urgentAlerts.length > 0 && (
-          <View className="px-6 mb-6">
-            <View className="flex-row items-center justify-between mb-3">
-              <Text className="text-xs font-semibold text-slate-500 uppercase">
-                Needs Attention
-              </Text>
-              <Pressable onPress={() => router.push("/(app)/alerts")}>
-                <Text className="text-xs text-brand-600 font-medium">
-                  See all →
-                </Text>
-              </Pressable>
-            </View>
-            {urgentAlerts.map((alert) => {
-              const sev = SEVERITY_COLORS[alert.severity];
-              return (
-                <Pressable
-                  key={alert.id}
-                  onPress={() => router.push(`/(app)/plots/${alert.plot.id}`)}
-                  className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-2 active:bg-stone-50"
-                >
-                  <View className="flex-row items-start gap-3">
-                    <View
-                      className={`${sev.bg} w-10 h-10 rounded-full items-center justify-center`}
-                    >
-                      <Ionicons
-                        name={sev.icon}
-                        size={20}
-                        color={sev.iconColor}
-                      />
-                    </View>
-                    <View className="flex-1">
-                      <View className="flex-row items-center gap-2 flex-wrap">
-                        <Text className="text-sm font-semibold text-slate-900">
-                          {alert.plot.name}
-                        </Text>
-                        <View className={`${sev.bg} px-2 py-0.5 rounded-full`}>
-                          <Text className={`text-xs ${sev.text} font-medium`}>
-                            {alert.severity}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text
-                        className="text-sm text-slate-700 mt-1"
-                        numberOfLines={2}
-                      >
-                        {alert.message}
-                      </Text>
-                      <Text className="text-xs text-slate-400 mt-1">
-                        {formatRelativeTime(alert.createdAt)}
-                      </Text>
-                    </View>
-                  </View>
-                </Pressable>
-              );
-            })}
+        {error && (
+          <View className="mx-6 mb-6 bg-red-50 border border-red-200 rounded-2xl p-4">
+            <Text className="text-sm font-medium text-red-900">
+              Failed to load dashboard
+            </Text>
+            <Text className="text-xs text-red-700 mt-1">
+              Pull down to retry
+            </Text>
           </View>
         )}
 
-        {/* Recent Activity */}
-        {recentActivity.length > 0 && (
-          <View className="px-6 mb-6">
-            <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
-              Recent Activity
-            </Text>
-            <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              {recentActivity.map((activity, idx) => (
-                <Pressable
-                  key={activity.id}
-                  onPress={() =>
-                    router.push(`/(app)/plots/${activity.plot.id}`)
+        {!error && (
+          <>
+            {/* Stats grid */}
+            <View className="px-6 mb-6">
+              <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                Today&apos;s Overview
+              </Text>
+              <View className="flex-row flex-wrap" style={{ gap: 8 }}>
+                <StatCard
+                  label={
+                    user?.role === "ADMIN" || user?.role === "SUPER_ADMIN"
+                      ? "Total Plots"
+                      : "My Plots"
                   }
-                  className={`flex-row items-center p-3 active:bg-stone-50 ${idx < recentActivity.length - 1 ? "border-b border-slate-100" : ""}`}
-                >
-                  {activity.images.length > 0 ? (
-                    <Image
-                      source={{ uri: activity.images[0].imageUrl }}
-                      className="w-12 h-12 rounded-lg bg-stone-100"
-                    />
-                  ) : (
-                    <View className="w-12 h-12 rounded-lg bg-brand-100 items-center justify-center">
-                      <Ionicons
-                        name="document-text"
-                        size={20}
-                        color={colors.brand[600]}
-                      />
-                    </View>
-                  )}
-                  <View className="flex-1 ml-3">
-                    <Text className="text-sm font-medium text-slate-900">
-                      {activity.user.firstName} {activity.user.lastName}
-                    </Text>
-                    <Text
-                      className="text-xs text-slate-500 mt-0.5"
-                      numberOfLines={1}
-                    >
-                      {activity.plot.name} •{" "}
-                      {formatRelativeTime(activity.createdAt)}
-                    </Text>
-                    {activity.observations && (
-                      <Text
-                        className="text-xs text-slate-600 mt-0.5"
-                        numberOfLines={1}
-                      >
-                        {activity.observations.split("\n")[0]}
-                      </Text>
-                    )}
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={colors.text.muted}
-                  />
-                </Pressable>
-              ))}
+                  value={stats?.plots ?? 0}
+                  icon="leaf"
+                  color={colors.brand[600]}
+                  onPress={() => router.push("/(app)/plots")}
+                />
+                <StatCard
+                  label="Open Alerts"
+                  value={stats?.openAlerts ?? 0}
+                  icon="warning"
+                  color={stats?.openAlerts ? "#dc2626" : colors.text.muted}
+                  onPress={() => router.push("/(app)/alerts")}
+                />
+                <StatCard
+                  label="My Observations"
+                  value={stats?.myObservations ?? 0}
+                  icon="document-text"
+                  color={colors.brand[600]}
+                  onPress={() => router.push("/(app)/analytics")}
+                />
+                <StatCard
+                  label="Today"
+                  value={stats?.todaysObservations ?? 0}
+                  icon="today"
+                  color={colors.brand[600]}
+                  onPress={() => router.push("/(app)/analytics")}
+                />
+              </View>
             </View>
-          </View>
+
+            {/* Urgent Alerts */}
+            {urgentAlerts.length > 0 && (
+              <View className="px-6 mb-6">
+                <View className="flex-row items-center justify-between mb-3">
+                  <Text className="text-xs font-semibold text-slate-500 uppercase">
+                    Needs Attention
+                  </Text>
+                  <Pressable onPress={() => router.push("/(app)/alerts")}>
+                    <Text className="text-xs text-brand-600 font-medium">
+                      See all →
+                    </Text>
+                  </Pressable>
+                </View>
+                {urgentAlerts.map((alert) => {
+                  const sev = SEVERITY_COLORS[alert.severity];
+                  return (
+                    <Pressable
+                      key={alert.id}
+                      onPress={() =>
+                        router.push(`/(app)/plots/${alert.plot.id}`)
+                      }
+                      className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-2 active:bg-stone-50"
+                    >
+                      <View className="flex-row items-start gap-3">
+                        <View
+                          className={`${sev.bg} w-10 h-10 rounded-full items-center justify-center`}
+                        >
+                          <Ionicons
+                            name={sev.icon}
+                            size={20}
+                            color={sev.iconColor}
+                          />
+                        </View>
+                        <View className="flex-1">
+                          <View className="flex-row items-center gap-2 flex-wrap">
+                            <Text className="text-sm font-semibold text-slate-900">
+                              {alert.plot.name}
+                            </Text>
+                            <View
+                              className={`${sev.bg} px-2 py-0.5 rounded-full`}
+                            >
+                              <Text
+                                className={`text-xs ${sev.text} font-medium`}
+                              >
+                                {alert.severity}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text
+                            className="text-sm text-slate-700 mt-1"
+                            numberOfLines={2}
+                          >
+                            {alert.message}
+                          </Text>
+                          <Text className="text-xs text-slate-400 mt-1">
+                            {formatRelativeTime(alert.createdAt)}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Recent Activity */}
+            {recentActivity.length > 0 && (
+              <View className="px-6 mb-6">
+                <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
+                  Recent Activity
+                </Text>
+                <View className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  {recentActivity.map((activity, idx) => (
+                    <Pressable
+                      key={activity.id}
+                      onPress={() =>
+                        router.push(`/(app)/plots/${activity.plot.id}`)
+                      }
+                      className={`flex-row items-center p-3 active:bg-stone-50 ${idx < recentActivity.length - 1 ? "border-b border-slate-100" : ""}`}
+                    >
+                      {activity.images.length > 0 ? (
+                        <Image
+                          source={{ uri: activity.images[0].imageUrl }}
+                          className="w-12 h-12 rounded-lg bg-stone-100"
+                        />
+                      ) : (
+                        <View className="w-12 h-12 rounded-lg bg-brand-100 items-center justify-center">
+                          <Ionicons
+                            name="document-text"
+                            size={20}
+                            color={colors.brand[600]}
+                          />
+                        </View>
+                      )}
+                      <View className="flex-1 ml-3">
+                        <Text className="text-sm font-medium text-slate-900">
+                          {activity.user.firstName} {activity.user.lastName}
+                        </Text>
+                        <Text
+                          className="text-xs text-slate-500 mt-0.5"
+                          numberOfLines={1}
+                        >
+                          {activity.plot.name} •{" "}
+                          {formatRelativeTime(activity.createdAt)}
+                        </Text>
+                        {activity.observations && (
+                          <Text
+                            className="text-xs text-slate-600 mt-0.5"
+                            numberOfLines={1}
+                          >
+                            {activity.observations.split("\n")[0]}
+                          </Text>
+                        )}
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={colors.text.muted}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            )}
+          </>
         )}
 
         {/* Quick Actions */}
