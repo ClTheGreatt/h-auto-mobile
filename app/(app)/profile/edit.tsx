@@ -13,6 +13,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomActionBar } from "../../../components/BottomActionBar";
 import { colors } from "../../../constants/colors";
 import { getUser } from "../../../lib/auth";
 import { useUpdateProfile } from "../../../lib/hooks/use-update-profile";
@@ -124,7 +125,7 @@ export default function EditProfile() {
           </Text>
         </ScrollView>
 
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4">
+        <BottomActionBar>
           <Pressable
             onPress={handleSave}
             disabled={updateProfile.isPending}
@@ -142,7 +143,7 @@ export default function EditProfile() {
               </Text>
             )}
           </Pressable>
-        </View>
+        </BottomActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

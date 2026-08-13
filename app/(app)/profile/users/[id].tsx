@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomActionBar } from "../../../../components/BottomActionBar";
 import { STATUS_META, StatusChangeSheet } from "../../../../components/StatusChangeSheet";
 import { colors } from "../../../../constants/colors";
 import { getUser } from "../../../../lib/auth";
@@ -291,7 +292,7 @@ export default function UserDetailScreen() {
       </ScrollView>
 
       {showStatusAction && (
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4">
+        <BottomActionBar>
           <Pressable
             onPress={() => setStatusSheetOpen(true)}
             className="bg-brand-600 rounded-xl py-3.5 items-center active:bg-brand-700"
@@ -300,7 +301,7 @@ export default function UserDetailScreen() {
               Change Status
             </Text>
           </Pressable>
-        </View>
+        </BottomActionBar>
       )}
 
       <StatusChangeSheet

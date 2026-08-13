@@ -12,6 +12,10 @@ export function useChangePassword() {
       return api<{ success: boolean }>("/api/mobile/me/change-password", {
         method: "POST",
         body: input,
+        // The server returns 401 for "current password is incorrect", not
+        // just for an invalid/expired token — don't let the global
+        // interceptor treat a typo as a session expiring.
+        skipAuthRedirect: true,
       });
     },
   });

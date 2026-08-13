@@ -13,6 +13,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomActionBar } from "../../../components/BottomActionBar";
 import { colors } from "../../../constants/colors";
 import {
   detectImportTypeMismatch,
@@ -561,10 +562,7 @@ export default function ImportUsers() {
       </ScrollView>
 
       {phase === "preview" && (
-        <View
-          className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4 flex-row"
-          style={{ gap: 10 }}
-        >
+        <BottomActionBar row>
           <Pressable
             onPress={reset}
             className="flex-1 rounded-xl py-3.5 items-center bg-white border border-slate-200 active:bg-slate-50"
@@ -586,14 +584,11 @@ export default function ImportUsers() {
               Import {validCount}
             </Text>
           </Pressable>
-        </View>
+        </BottomActionBar>
       )}
 
       {phase === "done" && (
-        <View
-          className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4 flex-row"
-          style={{ gap: 10 }}
-        >
+        <BottomActionBar row>
           <Pressable
             onPress={reset}
             className="flex-1 rounded-xl py-3.5 items-center bg-white border border-slate-200 active:bg-slate-50"
@@ -613,7 +608,7 @@ export default function ImportUsers() {
               View users
             </Text>
           </Pressable>
-        </View>
+        </BottomActionBar>
       )}
     </SafeAreaView>
   );

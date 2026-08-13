@@ -134,7 +134,7 @@ const HELP_SECTIONS: HelpSection[] = [
           "Tap or click any alert to see the full context — sensor readings, plot details, and time",
           "Every alert now includes a 'Suggested action' with step-by-step guidance on how to respond",
           "Follow the suggested steps (water, shade, ventilate, fertilize, depending on the alert type)",
-          "Sensor readings will auto-resolve the alert when values return to the optimal range, or you can manually resolve it",
+          "Sensor readings automatically resolve the alert once values return to the optimal range — there is no manual resolve button in this app",
         ],
       },
     ],

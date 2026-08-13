@@ -90,7 +90,7 @@ const TECH_STACK: TechCategory[] = [
   {
     category: "Cloud Services",
     items:
-      "Vercel, Neon Database, Cloudinary, Expo Push Notifications, Semaphore SMS, Resend Email",
+      "Vercel, Neon Database, Cloudinary, Expo Push Notifications, TextBee SMS, Resend Email",
   },
   {
     category: "IoT Hardware",

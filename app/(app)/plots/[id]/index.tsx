@@ -13,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomActionBar } from "../../../../components/BottomActionBar";
 import { PlotAssignmentsCard } from "../../../../components/plots/PlotAssignmentsCard";
 import { colors } from "../../../../constants/colors";
 import { getUser } from "../../../../lib/auth";
@@ -563,7 +564,7 @@ export default function PlotDetail() {
       </ScrollView>
 
       {/* Sticky CTA */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4">
+      <BottomActionBar>
         {loggingPaused ? (
           <View className="flex-row items-center justify-center gap-2 py-2">
             <Ionicons
@@ -590,7 +591,7 @@ export default function PlotDetail() {
             </View>
           </Pressable>
         )}
-      </View>
+      </BottomActionBar>
 
       {/* Photo preview modal */}
       <Modal

@@ -30,6 +30,13 @@ type ApiOptions = {
   headers?: Record<string, string>;
   /** If true, won't auto-attach the auth token (for /login, /signup, etc.) */
   skipAuth?: boolean;
+  /**
+   * If true, a 401 from this call won't trigger the global logout+redirect.
+   * Unlike skipAuth, the token is still attached — for authenticated
+   * endpoints where a 401 means something other than an invalid/expired
+   * session (e.g. change-password's "current password is incorrect").
+   */
+  skipAuthRedirect?: boolean;
   /** Overrides the default timeout (15s for JSON, 60s for FormData uploads). */
   timeoutMs?: number;
 };
@@ -43,6 +50,7 @@ export async function api<T = unknown>(
     body,
     headers = {},
     skipAuth = false,
+    skipAuthRedirect = false,
     timeoutMs,
   } = options;
 
@@ -106,13 +114,15 @@ export async function api<T = unknown>(
   const data = isJson ? await res.json() : await res.text();
 
   if (!res.ok) {
-    if (res.status === 401 && !skipAuth) {
-      // Session expired or token invalidated server-side. skipAuth is only
-      // ever used by the login request itself (lib/api.ts callers grepped),
-      // so excluding it here means a wrong-password 401 on /login never
-      // triggers this — that's a login failure, not a session expiring,
-      // and login.tsx already shows its own inline error for it. Reuse
-      // logout() rather than a second token-clearing path.
+    if (res.status === 401 && !skipAuth && !skipAuthRedirect) {
+      // Session expired or token invalidated server-side. skipAuth excludes
+      // the login request itself (wrong-password 401 there is a login
+      // failure, not a session expiring — login.tsx shows its own inline
+      // error). skipAuthRedirect excludes authenticated endpoints whose 401
+      // means something else entirely, e.g. change-password's "current
+      // password is incorrect" — grepped every api/mobile route; that's the
+      // only such case. Reuse logout() rather than a second token-clearing
+      // path.
       await logout();
       router.replace("/(auth)/login");
     }

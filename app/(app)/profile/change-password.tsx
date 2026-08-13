@@ -13,6 +13,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { BottomActionBar } from "../../../components/BottomActionBar";
 import { colors } from "../../../constants/colors";
 import { useChangePassword } from "../../../lib/hooks/use-change-password";
 
@@ -99,7 +100,7 @@ export default function ChangePassword() {
             value={newPassword}
             onChangeText={setNewPassword}
             editable={!changePwd.isPending}
-            hint="At least 8 characters"
+            hint="At least 8 characters, with uppercase, lowercase, a number, and a symbol"
           />
           <PasswordField
             label="Confirm new password"
@@ -109,7 +110,7 @@ export default function ChangePassword() {
           />
         </ScrollView>
 
-        <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-6 py-4">
+        <BottomActionBar>
           <Pressable
             onPress={handleSave}
             disabled={changePwd.isPending}
@@ -127,7 +128,7 @@ export default function ChangePassword() {
               </Text>
             )}
           </Pressable>
-        </View>
+        </BottomActionBar>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
