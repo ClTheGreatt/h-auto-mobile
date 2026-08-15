@@ -120,6 +120,11 @@ export default function LogObservation() {
   }
 
   function handleSubmit() {
+    if (!imageUri) {
+      Alert.alert("Missing photo", "Please attach a photo of the plant.");
+      return;
+    }
+
     if (!observations.trim()) {
       Alert.alert("Missing info", "Please write what you observed.");
       return;
@@ -241,7 +246,7 @@ export default function LogObservation() {
 
           {/* Photo section */}
           <Text className="text-xs font-semibold text-slate-500 uppercase mb-2">
-            Photo (optional)
+            Photo <Text className="text-red-500">*</Text>
           </Text>
           <View className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm mb-4">
             {imageUri ? (
