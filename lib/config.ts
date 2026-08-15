@@ -16,7 +16,16 @@ const DEV_API_URL = "http://192.168.1.54:3000"; // ⚠️ CHANGE THIS
 // Production custom domain (Cloudflare DNS), matching the web app's
 // deployed host. A cloud build bakes this in unconditionally whenever
 // __DEV__ === false (any non-development-client EAS profile).
-const PROD_API_URL = "https://h-auto.org";
+// MUST be the canonical, non-redirecting host — verified with curl:
+// https://h-auto.org (bare apex) 308-redirects to https://www.h-auto.org,
+// even for POST /api routes. React Native's fetch does not reliably
+// preserve the Authorization header or body across a redirect, so pointing
+// this at a redirecting host silently breaks authenticated requests in
+// release builds while working fine in dev (which hits a local server with
+// no redirect at all). If the canonical host ever changes, verify with
+// `curl -sI -X POST <host>/api/auth/mobile-login` that it returns a real
+// response (400/401), not a 3xx, before changing this value.
+const PROD_API_URL = "https://www.h-auto.org";
 
 export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
 
