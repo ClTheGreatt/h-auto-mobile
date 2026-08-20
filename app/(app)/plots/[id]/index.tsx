@@ -74,6 +74,7 @@ export default function PlotDetail() {
   // coverage line.
   const { data: assignmentsData } = usePlotAssignments(id);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [guideExpanded, setGuideExpanded] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const [observationsY, setObservationsY] = useState<number | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -284,6 +285,53 @@ export default function PlotDetail() {
               </Text>
             )}
           </View>
+        )}
+
+        {/* Cultivation guide — reference material, shown to every role
+            that can already view this plot, no extra gating. Stored as
+            plain text with blank-line-separated sections (e.g.
+            "Planting: ...\n\nWatering: ..."), not markdown — RN's <Text>
+            already preserves newlines as written, so no parsing/library
+            is needed here either. Truncated to 3 lines with a tap-to-
+            expand toggle rather than web's fully-collapsed default: a
+            short preview is more useful than an empty header on a
+            screen this narrow. */}
+        {plot.crop && (
+          plot.crop.cultivationGuide ? (
+            <Pressable
+              onPress={() => setGuideExpanded((v) => !v)}
+              className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3"
+            >
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-xs font-semibold text-slate-500 uppercase">
+                  Cultivation Guide
+                </Text>
+                <Ionicons
+                  name={guideExpanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={colors.text.muted}
+                />
+              </View>
+              <Text
+                className="text-sm text-slate-700"
+                numberOfLines={guideExpanded ? undefined : 3}
+              >
+                {plot.crop.cultivationGuide}
+              </Text>
+              <Text className="text-xs font-medium text-brand-700 mt-2">
+                {guideExpanded ? "Show less" : "Show more"}
+              </Text>
+            </Pressable>
+          ) : (
+            <View className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm mb-3">
+              <Text className="text-xs font-semibold text-slate-500 uppercase mb-2">
+                Cultivation Guide
+              </Text>
+              <Text className="text-sm text-slate-400 italic">
+                No cultivation guide added for this crop yet.
+              </Text>
+            </View>
+          )
         )}
 
         {/* Monitoring assignments */}

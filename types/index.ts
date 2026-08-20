@@ -106,6 +106,7 @@ export type PlotDetail = {
     name: string;
     variety: string | null;
     daysToHarvest: number;
+    cultivationGuide: string | null;
   } | null;
   currentStage: {
     id: string;
