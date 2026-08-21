@@ -20,6 +20,7 @@ import { colors } from "../../constants/colors";
 import { api } from "../../lib/api";
 import { useAnalytics } from "../../lib/hooks/use-analytics";
 import { useMyPlots } from "../../lib/hooks/use-my-plots";
+import { PLOT_STATUS_META } from "../../lib/plot-status";
 
 const screenWidth = Dimensions.get("window").width - 48;
 
@@ -63,13 +64,21 @@ const RANGE_SUBTITLE: Record<Range, string> = {
   all: "All time",
 };
 
+// Labels come from the shared plot-status map (single source of truth for
+// wording); the hex colors here are this chart's own — a plain RN View
+// background, unrelated to the Tailwind bg-/text- classes PLOT_STATUS_META
+// otherwise carries — so they stay local rather than being forced into
+// that shared map.
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  PREPARING: { label: "Preparing", color: "#94a3b8" },
-  PLANTED: { label: "Planted", color: "#3b82f6" },
-  GROWING: { label: "Growing", color: "#16a34a" },
-  READY_FOR_HARVEST: { label: "Ready to harvest", color: "#f59e0b" },
-  HARVESTED: { label: "Harvested", color: "#a855f7" },
-  FALLOW: { label: "Fallow", color: "#78716c" },
+  PREPARING: { label: PLOT_STATUS_META.PREPARING.label, color: "#94a3b8" },
+  PLANTED: { label: PLOT_STATUS_META.PLANTED.label, color: "#3b82f6" },
+  GROWING: { label: PLOT_STATUS_META.GROWING.label, color: "#16a34a" },
+  READY_FOR_HARVEST: {
+    label: PLOT_STATUS_META.READY_FOR_HARVEST.label,
+    color: "#f59e0b",
+  },
+  HARVESTED: { label: PLOT_STATUS_META.HARVESTED.label, color: "#a855f7" },
+  FALLOW: { label: PLOT_STATUS_META.FALLOW.label, color: "#78716c" },
 };
 
 const baseChartConfig = {

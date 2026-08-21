@@ -14,27 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { colors } from "../../../constants/colors";
 import { getUser } from "../../../lib/auth";
 import { useMyPlots } from "../../../lib/hooks/use-my-plots";
+import { PLOT_STATUS_META, UNKNOWN_PLOT_STATUS_META } from "../../../lib/plot-status";
 import type { Plot, User } from "../../../types";
-
-const STATUS_COLORS: Record<
-  string,
-  { bg: string; text: string; label: string }
-> = {
-  PREPARING: { bg: "bg-slate-100", text: "text-slate-700", label: "Preparing" },
-  PLANTED: { bg: "bg-blue-100", text: "text-blue-700", label: "Planted" },
-  GROWING: { bg: "bg-brand-100", text: "text-brand-700", label: "Growing" },
-  READY_FOR_HARVEST: {
-    bg: "bg-amber-100",
-    text: "text-amber-700",
-    label: "Ready",
-  },
-  HARVESTED: {
-    bg: "bg-purple-100",
-    text: "text-purple-700",
-    label: "Harvested",
-  },
-  FALLOW: { bg: "bg-stone-100", text: "text-stone-700", label: "Fallow" },
-};
 
 // Mirrors web's ACTIVE_STATUSES / COMPLETED_STATUSES buckets exactly.
 const ACTIVE_STATUSES = [
@@ -236,7 +217,7 @@ export default function Plots() {
 
 function PlotCard({ plot }: { plot: Plot }) {
   const router = useRouter();
-  const statusStyle = STATUS_COLORS[plot.status] ?? STATUS_COLORS.PREPARING;
+  const statusStyle = PLOT_STATUS_META[plot.status] ?? UNKNOWN_PLOT_STATUS_META;
 
   return (
     <Pressable

@@ -121,6 +121,11 @@ export type PlotDetail = {
     lastSeenAt: string | null;
   } | null;
   deviceOnline: boolean;
+  // deviceOnline is true for both FRESH and STALE devices (a documented
+  // web-side compatibility helper) — deviceFreshness/deviceStale are what
+  // actually distinguish them. See LiveDot in plots/[id]/index.tsx.
+  deviceFreshness: "FRESH" | "STALE" | "OFFLINE" | "NEVER_REPORTED" | null;
+  deviceStale: boolean;
   latestReading: SensorReading | null;
   openAlertsCount: number;
   observations: Observation[];

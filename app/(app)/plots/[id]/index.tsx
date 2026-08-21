@@ -21,27 +21,8 @@ import { useDeleteObservation } from "../../../../lib/hooks/use-delete-observati
 import { usePlot } from "../../../../lib/hooks/use-plot";
 import { usePlotAssignments } from "../../../../lib/hooks/use-plot-assignments";
 import { canDeleteLog } from "../../../../lib/permissions";
+import { PLOT_STATUS_META, UNKNOWN_PLOT_STATUS_META } from "../../../../lib/plot-status";
 import type { User } from "../../../../types";
-
-const STATUS_COLORS: Record<
-  string,
-  { bg: string; text: string; label: string }
-> = {
-  PREPARING: { bg: "bg-slate-100", text: "text-slate-700", label: "Preparing" },
-  PLANTED: { bg: "bg-blue-100", text: "text-blue-700", label: "Planted" },
-  GROWING: { bg: "bg-brand-100", text: "text-brand-700", label: "Growing" },
-  READY_FOR_HARVEST: {
-    bg: "bg-amber-100",
-    text: "text-amber-700",
-    label: "Ready",
-  },
-  HARVESTED: {
-    bg: "bg-purple-100",
-    text: "text-purple-700",
-    label: "Harvested",
-  },
-  FALLOW: { bg: "bg-stone-100", text: "text-stone-700", label: "Fallow" },
-};
 
 function formatDate(iso: string | null) {
   if (!iso) return "—";
@@ -141,7 +122,7 @@ export default function PlotDetail() {
   }
 
   const plot = data.plot;
-  const statusStyle = STATUS_COLORS[plot.status] ?? STATUS_COLORS.PREPARING;
+  const statusStyle = PLOT_STATUS_META[plot.status] ?? UNKNOWN_PLOT_STATUS_META;
   const isHarvested = plot.status === "HARVESTED";
   const isArchived = plot.status === "ARCHIVED";
   const loggingPaused = isHarvested || isArchived;
@@ -365,6 +346,7 @@ export default function PlotDetail() {
               {plot.latestReading && (
                 <LiveDot
                   online={plot.deviceOnline}
+                  stale={plot.deviceStale}
                   onPressOffline={() => router.push("/(app)/profile/help")}
                 />
               )}
@@ -723,15 +705,32 @@ function MetricTile({
 }
 function LiveDot({
   online,
+  stale,
   onPressOffline,
 }: {
   online: boolean;
+  stale: boolean;
   onPressOffline?: () => void;
 }) {
   const pulse = useRef(new Animated.Value(1)).current;
 
+  // deviceOnline is true for both FRESH and STALE devices (a documented
+  // web-side compatibility helper) — deviceStale is what actually
+  // distinguishes them, so it's checked first: a stale device would
+  // otherwise also satisfy `online` and wrongly land in the "online"
+  // branch. NEVER_REPORTED and no-device (deviceFreshness null) both leave
+  // `online` false already, so they collapse into "offline" here — the
+  // same bucket as a genuinely offline device, since none of them are
+  // currently delivering live data, and this component only ever renders
+  // once a latestReading already exists to have gotten this far.
+  const status: "online" | "delayed" | "offline" = !online
+    ? "offline"
+    : stale
+      ? "delayed"
+      : "online";
+
   useEffect(() => {
-    if (!online) return;
+    if (status !== "online") return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, {
@@ -748,9 +747,9 @@ function LiveDot({
     );
     loop.start();
     return () => loop.stop();
-  }, [pulse, online]);
+  }, [pulse, status]);
 
-  if (!online) {
+  if (status === "offline") {
     return (
       <Pressable
         onPress={onPressOffline}
@@ -774,6 +773,33 @@ function LiveDot({
     );
   }
 
+  if (status === "delayed") {
+    // Tappable to the same Help screen as "Offline" — a stale device is
+    // the same underlying connectivity concern, just not yet past the
+    // offline threshold.
+    return (
+      <Pressable
+        onPress={onPressOffline}
+        className="flex-row items-center gap-1.5 active:opacity-70"
+      >
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: colors.status.warning,
+          }}
+        />
+        <Text className="text-xs font-medium text-amber-700">Delayed</Text>
+        <Ionicons
+          name="help-circle-outline"
+          size={13}
+          color={colors.status.warning}
+        />
+      </Pressable>
+    );
+  }
+
   return (
     <View className="flex-row items-center gap-1.5">
       <Animated.View
@@ -785,7 +811,7 @@ function LiveDot({
           backgroundColor: colors.brand[600],
         }}
       />
-      <Text className="text-xs font-medium text-brand-700">Live</Text>
+      <Text className="text-xs font-medium text-brand-700">Online</Text>
     </View>
   );
 }
