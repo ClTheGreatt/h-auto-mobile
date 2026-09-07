@@ -204,9 +204,9 @@ const FAQ_ITEMS: FaqItem[] = [
       "A reading of 0% means the sensor is in dry air or not fully inserted into moist soil. Push the sensor probes deeper into the soil (at least 3-4 cm) and check readings after 30 seconds.",
   },
   {
-    question: "My ESP32 shows OFFLINE. What do I do?",
+    question: "What do Online, Delayed, and Offline mean?",
     answer:
-      "Check that (1) the device has power, (2) it's within Wi-Fi range, and (3) the Wi-Fi network is a 2.4GHz network — ESP32 does not support 5GHz. Devices are marked ONLINE within a few minutes of powering on.",
+      "Online means the device sent a reading in the last 15 minutes. Delayed means it's been quiet for 15 to 30 minutes — usually a brief Wi-Fi drop that recovers on its own. Offline means no reading for over 30 minutes, and an alert is sent. If a device stays Offline, check that (1) it has power, (2) it's within Wi-Fi range, and (3) the network is 2.4GHz — the ESP32 does not support 5GHz.",
   },
   {
     question: "Why don't I see NPK values on some plots?",
