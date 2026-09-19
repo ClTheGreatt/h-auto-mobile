@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StudentFarmerSection } from "../../../../components/StudentFarmerSection";
 import { UserListRow } from "../../../../components/UserListRow";
+import { AdminRouteGuard } from "../../../../components/AdminRouteGuard";
 import { colors } from "../../../../constants/colors";
 import { groupStudents } from "../../../../lib/group-students";
 import { useUsers, type UsersView } from "../../../../lib/hooks/use-users";
@@ -33,7 +34,15 @@ const ROLE_META: Record<string, { label: string; color: string; bg: string }> =
 
 const FLAT_ROLE_ORDER = ["SUPER_ADMIN", "ADMIN", "FACULTY"];
 
-export default function Users() {
+export default function UsersRoute() {
+  return (
+    <AdminRouteGuard>
+      <Users />
+    </AdminRouteGuard>
+  );
+}
+
+function Users() {
   const router = useRouter();
   const [view, setView] = useState<UsersView>("active");
   const { data, isLoading, refetch, error } = useUsers(view);

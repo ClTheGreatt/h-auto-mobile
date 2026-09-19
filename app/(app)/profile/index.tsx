@@ -32,7 +32,7 @@ import {
   useRemoveAvatar,
   useUploadAvatar,
 } from "../../../lib/hooks/use-upload-avatar";
-import { formatRoleLabel } from "../../../lib/permissions";
+import { formatRoleLabel, isAdminRole } from "../../../lib/permissions";
 import { unregisterPushToken } from "../../../lib/push";
 import type { User } from "../../../types";
 
@@ -321,7 +321,7 @@ export default function Profile() {
           </View>
         </View>
         {/* Admin tools — only for ADMIN and SUPER_ADMIN */}
-        {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
+        {isAdminRole(user.role) && (
           <View className="px-6 mt-6">
             <Text className="text-xs font-semibold text-slate-500 uppercase mb-3">
               Administration

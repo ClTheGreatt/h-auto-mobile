@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomActionBar } from "../../../../components/BottomActionBar";
+import { AdminRouteGuard } from "../../../../components/AdminRouteGuard";
 import { STATUS_META, StatusChangeSheet } from "../../../../components/StatusChangeSheet";
 import { colors } from "../../../../constants/colors";
 import { getUser } from "../../../../lib/auth";
@@ -43,7 +44,15 @@ function formatDate(iso: string | null, fallback = "—") {
   });
 }
 
-export default function UserDetailScreen() {
+export default function UserDetailRoute() {
+  return (
+    <AdminRouteGuard>
+      <UserDetailScreen />
+    </AdminRouteGuard>
+  );
+}
+
+function UserDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading, error, refetch } = useUser(id ?? null);

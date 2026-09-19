@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomActionBar } from "../../../components/BottomActionBar";
+import { AdminRouteGuard } from "../../../components/AdminRouteGuard";
 import { colors } from "../../../constants/colors";
 import {
   detectImportTypeMismatch,
@@ -76,7 +77,15 @@ const REQUIRED_CAPTION: Record<ImportType, string> = {
 const PASSWORD_NOTE =
   "A temporary password is generated automatically for each account and emailed to the user. Do not include a password column.";
 
-export default function ImportUsers() {
+export default function ImportUsersRoute() {
+  return (
+    <AdminRouteGuard>
+      <ImportUsers />
+    </AdminRouteGuard>
+  );
+}
+
+function ImportUsers() {
   const router = useRouter();
   const navigation = useNavigation();
   const importUsers = useImportUsers();

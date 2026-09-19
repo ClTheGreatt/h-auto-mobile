@@ -1,4 +1,8 @@
-import type { User } from "../types";
+import type { User, UserRole } from "../types";
+
+export function isAdminRole(role: UserRole | null | undefined): boolean {
+  return role === "ADMIN" || role === "SUPER_ADMIN";
+}
 
 // Sino ang pwedeng i-manage (status change) ng kasalukuyang naka-login na user?
 export function canManage(
@@ -22,8 +26,7 @@ export function canDeleteLog(
 ): boolean {
   if (!currentUser) return false;
   const isAuthor = log.user.id === currentUser.id;
-  const isAdmin =
-    currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN";
+  const isAdmin = isAdminRole(currentUser.role);
   return isAuthor || isAdmin;
 }
 

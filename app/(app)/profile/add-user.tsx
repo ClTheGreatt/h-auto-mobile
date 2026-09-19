@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomActionBar } from "../../../components/BottomActionBar";
+import { AdminRouteGuard } from "../../../components/AdminRouteGuard";
 import { colors } from "../../../constants/colors";
 import {
   DEPARTMENTS,
@@ -49,7 +50,15 @@ function isValidPhone(v: string) {
   return /^(09\d{9}|\+639\d{9})$/.test(v.trim());
 }
 
-export default function AddUser() {
+export default function AddUserRoute() {
+  return (
+    <AdminRouteGuard>
+      <AddUser />
+    </AdminRouteGuard>
+  );
+}
+
+function AddUser() {
   const router = useRouter();
   const createUser = useCreateUser();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
