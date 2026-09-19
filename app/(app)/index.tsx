@@ -79,6 +79,7 @@ export default function Home() {
   }
 
   const stats = data?.stats;
+  const statsUnavailable = isLoading || !!error || !stats;
   const urgentAlerts = data?.urgentAlerts ?? [];
   const recentActivity = data?.recentActivity ?? [];
 
@@ -118,9 +119,13 @@ export default function Home() {
             <Text className="text-sm font-medium text-red-900">
               Failed to load dashboard
             </Text>
-            <Text className="text-xs text-red-700 mt-1">
-              Pull down to retry
-            </Text>
+            <Pressable
+              onPress={() => void refetch()}
+              accessibilityRole="button"
+              className="self-start mt-2 active:opacity-70"
+            >
+              <Text className="text-xs font-semibold text-red-700">Retry</Text>
+            </Pressable>
           </View>
         )}
 
@@ -138,28 +143,28 @@ export default function Home() {
                       ? "Total Plots"
                       : "My Plots"
                   }
-                  value={stats?.plots ?? 0}
+                  value={statsUnavailable ? "—" : stats.plots}
                   icon="leaf"
                   color={colors.brand[600]}
                   onPress={() => router.push("/(app)/plots")}
                 />
                 <StatCard
                   label="Open Alerts"
-                  value={stats?.openAlerts ?? 0}
+                  value={statsUnavailable ? "—" : stats.openAlerts}
                   icon="warning"
                   color={stats?.openAlerts ? "#dc2626" : colors.text.muted}
                   onPress={() => router.push("/(app)/alerts")}
                 />
                 <StatCard
                   label="My Observations"
-                  value={stats?.myObservations ?? 0}
+                  value={statsUnavailable ? "—" : stats.myObservations}
                   icon="document-text"
                   color={colors.brand[600]}
                   onPress={() => router.push("/(app)/analytics")}
                 />
                 <StatCard
                   label="Today"
-                  value={stats?.todaysObservations ?? 0}
+                  value={statsUnavailable ? "—" : stats.todaysObservations}
                   icon="today"
                   color={colors.brand[600]}
                   onPress={() => router.push("/(app)/analytics")}
@@ -343,7 +348,7 @@ function StatCard({
   onPress,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   onPress?: () => void;

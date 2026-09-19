@@ -1,18 +1,6 @@
 // lib/config.ts
 import Constants from "expo-constants";
 
-/**
- * API base URL for talking to the Next.js backend.
- *
- * For DEVELOPMENT: replace with your laptop's LAN IP
- *   - On laptop, run: ipconfig (Windows) → look for IPv4 Address
- *   - Example: "http://192.168.1.42:3000"
- *   - Phone must be on the SAME Wi-Fi
- *
- * For PRODUCTION: replace with your deployed URL
- *   - Example: "https://h-auto.vercel.app"
- */
-const DEV_API_URL = "http://192.168.1.54:3000"; // ⚠️ CHANGE THIS
 // Production custom domain (Cloudflare DNS), matching the web app's
 // deployed host. A cloud build bakes this in unconditionally whenever
 // __DEV__ === false (any non-development-client EAS profile).
@@ -27,7 +15,15 @@ const DEV_API_URL = "http://192.168.1.54:3000"; // ⚠️ CHANGE THIS
 // response (400/401), not a 3xx, before changing this value.
 const PROD_API_URL = "https://www.h-auto.org";
 
-export const API_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
+// Expo inlines EXPO_PUBLIC_* references into development bundles. Local/LAN
+// testing remains explicit while a missing or blank override safely uses the
+// canonical API. Release and preview bundles always ignore this override.
+// Example: EXPO_PUBLIC_API_URL=http://192.168.x.x:3000
+const developmentApiUrl =
+  process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, "") ?? "";
+
+export const API_URL =
+  __DEV__ && developmentApiUrl ? developmentApiUrl : PROD_API_URL;
 
 export const SESSION_DURATION_DAYS = 30;
 

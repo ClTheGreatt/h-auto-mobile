@@ -44,7 +44,13 @@ export default function Profile() {
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioLabel, setBioLabel] = useState("Biometric");
 
-  const { data: statsData } = useStats();
+  const {
+    data: statsData,
+    isError: statsError,
+    isFetching: statsFetching,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useStats();
   const uploadAvatar = useUploadAvatar();
   const removeAvatar = useRemoveAvatar();
 
@@ -212,6 +218,7 @@ export default function Profile() {
   }
 
   const stats = statsData?.stats;
+  const statsUnavailable = statsLoading || statsError || !stats;
 
   return (
     <SafeAreaView className="flex-1 bg-stone-50" edges={["top"]}>
@@ -281,7 +288,7 @@ export default function Profile() {
           <View className="flex-row" style={{ gap: 8 }}>
             <StatTile
               label="Observations"
-              value={stats?.observations ?? 0}
+              value={statsUnavailable ? "—" : stats.observations}
               icon="document-text"
             />
             <StatTile
@@ -290,15 +297,34 @@ export default function Profile() {
                   ? "My Plots"
                   : "Total Plots"
               }
-              value={stats?.plotsAssigned ?? 0}
+              value={statsUnavailable ? "—" : stats.plotsAssigned}
               icon="leaf"
             />
             <StatTile
               label="Member since"
-              value={formatMemberSince(stats?.memberSince)}
+              value={
+                statsUnavailable ? "—" : formatMemberSince(stats.memberSince)
+              }
               icon="calendar"
             />
           </View>
+          {statsError && (
+            <View className="mt-3 flex-row items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <Text className="text-xs text-red-700">
+                Unable to load statistics.
+              </Text>
+              <Pressable
+                onPress={() => void refetchStats()}
+                disabled={statsFetching}
+                accessibilityRole="button"
+                className="ml-3 active:opacity-70 disabled:opacity-50"
+              >
+                <Text className="text-xs font-semibold text-red-700">
+                  {statsFetching ? "Retrying…" : "Retry"}
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         {/* Account section */}
