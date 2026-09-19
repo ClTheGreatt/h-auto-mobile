@@ -44,7 +44,7 @@ export default function Profile() {
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioLabel, setBioLabel] = useState("Biometric");
 
-  const { data: statsData, refetch: refetchStats } = useStats();
+  const { data: statsData } = useStats();
   const uploadAvatar = useUploadAvatar();
   const removeAvatar = useRemoveAvatar();
 

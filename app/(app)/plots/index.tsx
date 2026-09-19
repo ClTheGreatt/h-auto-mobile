@@ -45,7 +45,7 @@ export default function Plots() {
     setRefreshing(false);
   }
 
-  const plots = data?.plots ?? [];
+  const plots = useMemo(() => data?.plots ?? [], [data?.plots]);
 
   const viewPlots = useMemo(() => {
     const bucket = view === "completed" ? COMPLETED_STATUSES : ACTIVE_STATUSES;

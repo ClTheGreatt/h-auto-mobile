@@ -124,8 +124,14 @@ export default function PlotDetail() {
   const plot = data.plot;
   const statusStyle = PLOT_STATUS_META[plot.status] ?? UNKNOWN_PLOT_STATUS_META;
   const isHarvested = plot.status === "HARVESTED";
+  const isFallow = plot.status === "FALLOW";
   const isArchived = plot.status === "ARCHIVED";
-  const loggingPaused = isHarvested || isArchived;
+  const loggingPaused = isHarvested || isFallow || isArchived;
+  const pausedStatusLabel = isHarvested
+    ? "harvested"
+    : isFallow
+      ? "fallow"
+      : "archived";
 
   // Mirrors web's dashboard "Day X of Y" progress format (dashboard/page.tsx)
   // instead of showing crop.daysToHarvest alone, which is a fixed cycle
@@ -509,14 +515,14 @@ export default function PlotDetail() {
                       ))}
                     </View>
                   )}
-                  {(o.plantHeightCm || o.leafCount) && (
+                  {(o.plantHeightCm != null || o.leafCount != null) && (
                     <View className="flex-row gap-3 mt-1">
-                      {o.plantHeightCm && (
+                      {o.plantHeightCm != null && (
                         <Text className="text-xs text-slate-500">
                           🌱 {o.plantHeightCm} cm
                         </Text>
                       )}
-                      {o.leafCount && (
+                      {o.leafCount != null && (
                         <Text className="text-xs text-slate-500">
                           🍃 {o.leafCount} leaves
                         </Text>
@@ -603,9 +609,7 @@ export default function PlotDetail() {
               color={colors.text.muted}
             />
             <Text className="text-sm text-slate-500 text-center">
-              {isHarvested
-                ? "This plot is harvested — logging is paused."
-                : "This plot is archived — logging is paused."}
+              This plot is {pausedStatusLabel} — logging is paused.
             </Text>
           </View>
         ) : (

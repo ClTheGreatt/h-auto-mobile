@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { isAuthenticated, logout } from "../lib/auth";
 import {
@@ -16,11 +16,7 @@ export default function Splash() {
   const [status, setStatus] = useState<SplashStatus>("loading");
   const [biometricLabel, setBiometricLabel] = useState("Biometric");
 
-  useEffect(() => {
-    runAuthCheck();
-  }, []);
-
-  async function runAuthCheck() {
+  const runAuthCheck = useCallback(async () => {
     const authed = await isAuthenticated();
     if (!authed) {
       router.replace("/(auth)/login");
@@ -43,7 +39,11 @@ export default function Splash() {
     } else {
       setStatus("failed");
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    void runAuthCheck();
+  }, [runAuthCheck]);
 
   async function handleRetry() {
     setStatus("biometric");

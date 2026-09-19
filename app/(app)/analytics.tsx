@@ -474,12 +474,16 @@ function TrendLine({
   dot,
   unit = "",
   decimalPlaces = 1,
+  height = 200,
+  emptyText = "No data in this range",
 }: {
   series: Point[];
   rgb: string;
   dot: string;
   unit?: string;
   decimalPlaces?: number;
+  height?: number;
+  emptyText?: string;
 }) {
   const { labels, values } = cleanSeries(series);
   const [tip, setTip] = useState<{
@@ -490,16 +494,14 @@ function TrendLine({
   } | null>(null);
 
   if (values.length === 0) {
-    return (
-      <NoChartData icon="analytics-outline" text="No data in this range" />
-    );
+    return <NoChartData icon="analytics-outline" text={emptyText} />;
   }
 
   return (
     <LineChart
       data={{ labels: thinLabels(labels), datasets: [{ data: values }] }}
       width={screenWidth}
-      height={200}
+      height={height}
       chartConfig={{
         ...baseChartConfig,
         decimalPlaces,
@@ -547,94 +549,64 @@ function TrendLine({
 }
 
 function NpkChart({ n, p, k }: { n: Point[]; p: Point[]; k: Point[] }) {
-  const [tip, setTip] = useState<{
-    x: number;
-    y: number;
-    value: number;
-    index: number;
-  } | null>(null);
+  const nutrients = [
+    {
+      key: "N",
+      label: "Nitrogen",
+      series: n,
+      rgb: "22, 163, 74",
+      color: "#16a34a",
+    },
+    {
+      key: "P",
+      label: "Phosphorus",
+      series: p,
+      rgb: "168, 85, 247",
+      color: "#a855f7",
+    },
+    {
+      key: "K",
+      label: "Potassium",
+      series: k,
+      rgb: "234, 88, 12",
+      color: "#ea580c",
+    },
+  ];
+  const hasAnyNutrientData = nutrients.some(({ series }) =>
+    series.some((point) => point.value != null && Number.isFinite(point.value)),
+  );
 
-  const idx: number[] = [];
-  n.forEach((d, i) => {
-    if (d.value != null) idx.push(i);
-  });
-  if (idx.length === 0) {
+  if (!hasAnyNutrientData) {
     return (
       <NoChartData icon="leaf-outline" text="No nutrient data in this range" />
     );
   }
-  const labels = idx.map((i) => n[i].label);
-  const nVals = idx.map((i) => (n[i].value ?? 0) as number);
-  const pVals = idx.map((i) => (p[i]?.value ?? 0) as number);
-  const kVals = idx.map((i) => (k[i]?.value ?? 0) as number);
 
   return (
-    <LineChart
-      data={{
-        labels: thinLabels(labels),
-        datasets: [
-          {
-            data: nVals,
-            color: (o = 1) => `rgba(22, 163, 74, ${o})`,
-            strokeWidth: 2,
-          },
-          {
-            data: pVals,
-            color: (o = 1) => `rgba(168, 85, 247, ${o})`,
-            strokeWidth: 2,
-          },
-          {
-            data: kVals,
-            color: (o = 1) => `rgba(234, 88, 12, ${o})`,
-            strokeWidth: 2,
-          },
-        ],
-        legend: ["N", "P", "K"],
-      }}
-      width={screenWidth}
-      height={220}
-      chartConfig={{
-        ...baseChartConfig,
-        decimalPlaces: 0,
-        color: (o = 1) => `rgba(100, 116, 139, ${o})`,
-      }}
-      bezier
-      style={{ marginLeft: -16, borderRadius: 8 }}
-      onDataPointClick={({ x, y, value, index }) =>
-        setTip((prev) =>
-          prev && prev.index === index ? null : { x, y, value, index },
-        )
-      }
-      decorator={() => {
-        if (!tip) return null;
-        const above = tip.y > 40;
-        const cx = Math.min(Math.max(tip.x, 32), screenWidth - 32);
-        const ry = above ? tip.y - 34 : tip.y + 12;
-        const ty = above ? tip.y - 19 : tip.y + 27;
-        return (
-          <G>
-            <Rect
-              x={cx - 26}
-              y={ry}
-              width={52}
-              height={22}
-              rx={4}
-              fill="#1e293b"
+    <View style={{ gap: 16 }}>
+      {nutrients.map((nutrient) => (
+        <View key={nutrient.key}>
+          <View className="flex-row items-center gap-2 mb-1">
+            <View
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: nutrient.color }}
             />
-            <SvgText
-              x={cx}
-              y={ty}
-              fontSize={11}
-              fontWeight="bold"
-              fill="#ffffff"
-              textAnchor="middle"
-            >
-              {`${Math.round(tip.value)}`}
-            </SvgText>
-          </G>
-        );
-      }}
-    />
+            <Text className="text-xs font-semibold text-slate-600">
+              {nutrient.label}
+            </Text>
+          </View>
+          <TrendLine
+            series={nutrient.series}
+            rgb={nutrient.rgb}
+            dot={nutrient.color}
+            unit=" mg/kg"
+            decimalPlaces={0}
+            height={160}
+            emptyText={`No ${nutrient.label.toLowerCase()} data in this range`}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 

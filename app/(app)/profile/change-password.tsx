@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -15,10 +16,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BottomActionBar } from "../../../components/BottomActionBar";
 import { colors } from "../../../constants/colors";
+import { logout } from "../../../lib/auth";
 import { useChangePassword } from "../../../lib/hooks/use-change-password";
 
 export default function ChangePassword() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const changePwd = useChangePassword();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -49,11 +52,19 @@ export default function ChangePassword() {
     changePwd.mutate(
       { currentPassword, newPassword },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          await logout();
+          queryClient.clear();
           Alert.alert(
             "Password changed",
-            "Your password has been updated successfully.",
-            [{ text: "OK", onPress: () => router.back() }],
+            "Password changed successfully. Please sign in again.",
+            [
+              {
+                text: "OK",
+                onPress: () => router.replace("/(auth)/login"),
+              },
+            ],
+            { cancelable: false },
           );
         },
         onError: (err: any) => {
@@ -85,7 +96,7 @@ export default function ChangePassword() {
           <View className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 flex-row items-start gap-2">
             <Ionicons name="information-circle" size={18} color="#b45309" />
             <Text className="flex-1 text-xs text-amber-800">
-              You'll need to enter your current password to confirm the change.
+              You&apos;ll need to enter your current password to confirm the change.
             </Text>
           </View>
 

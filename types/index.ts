@@ -208,13 +208,13 @@ export type AnalyticsData = {
     info: number;
   }[];
   observationsByDay: ActivityBucket[];
-  soilMoistureByDay: { label: string; value: number }[];
-  temperatureByDay: { label: string; value: number }[];
-  humidityByDay: { label: string; value: number }[];
-  lightByDay: { label: string; value: number }[];
-  nitrogenByDay: { label: string; value: number }[];
-  phosphorusByDay: { label: string; value: number }[];
-  potassiumByDay: { label: string; value: number }[];
+  soilMoistureByDay: { label: string; value: number | null }[];
+  temperatureByDay: { label: string; value: number | null }[];
+  humidityByDay: { label: string; value: number | null }[];
+  lightByDay: { label: string; value: number | null }[];
+  nitrogenByDay: { label: string; value: number | null }[];
+  phosphorusByDay: { label: string; value: number | null }[];
+  potassiumByDay: { label: string; value: number | null }[];
   statusDistribution: Record<string, number>;
 };
 

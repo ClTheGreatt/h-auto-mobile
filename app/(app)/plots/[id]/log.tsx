@@ -238,7 +238,7 @@ export default function LogObservation() {
               )}
               {gpsStatus === "error" && (
                 <Text className="text-sm text-red-700">
-                  Couldn't get location
+                  Couldn&apos;t get location
                 </Text>
               )}
             </View>
